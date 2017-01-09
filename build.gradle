@@ -1,0 +1,47 @@
+import java.nio.file.Files
+
+apply plugin: 'java'
+apply plugin: 'maven'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'iso-8859-1'
+}
+
+task processTestResources2(type: Copy) {
+    from tarTree(resources.bzip2('src/test/resources/zip64support.tar.bz2'))
+    into sourceSets.test.output.resourcesDir
+}
+
+test.dependsOn processTestResources2
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'org.tukaani:xz:1.6'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.powermock:powermock-module-junit4:1.6.4'
+    testCompile 'org.powermock:powermock-api-mockito:1.6.4'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+// Ignore javadoc error
+allprojects { tasks.withType(Javadoc) { failOnError false } }
