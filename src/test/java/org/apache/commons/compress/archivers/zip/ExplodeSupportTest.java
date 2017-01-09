@@ -21,13 +21,13 @@ package org.apache.commons.compress.archivers.zip;
 
 import static org.junit.Assert.*;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedOutputStream;
 
+import org.apache.commons.compress.AbstractTestCase;
 import org.apache.commons.compress.utils.BoundedInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Test;
@@ -35,7 +35,7 @@ import org.junit.Test;
 public class ExplodeSupportTest {
 
     private void testArchiveWithImplodeCompression(final String filename, final String entryName) throws IOException {
-        final ZipFile zip = new ZipFile(new File(filename));
+        final ZipFile zip = new ZipFile(AbstractTestCase.getFile(filename));
         final ZipArchiveEntry entry = zip.getEntries().nextElement();
         assertEquals("entry name", entryName, entry.getName());
         assertTrue("entry can't be read", zip.canReadEntryData(entry));
@@ -53,21 +53,21 @@ public class ExplodeSupportTest {
 
     @Test
     public void testArchiveWithImplodeCompression4K2Trees() throws IOException {
-        testArchiveWithImplodeCompression("target/test-classes/imploding-4Kdict-2trees.zip", "HEADER.TXT");
+        testArchiveWithImplodeCompression("imploding-4Kdict-2trees.zip", "HEADER.TXT");
     }
 
     @Test
     public void testArchiveWithImplodeCompression8K3Trees() throws IOException {
-        testArchiveWithImplodeCompression("target/test-classes/imploding-8Kdict-3trees.zip", "LICENSE.TXT");
+        testArchiveWithImplodeCompression("imploding-8Kdict-3trees.zip", "LICENSE.TXT");
     }
 
     @Test
     public void testTikaTestArchive() throws IOException {
-        testArchiveWithImplodeCompression("target/test-classes/moby-imploded.zip", "README");
+        testArchiveWithImplodeCompression("moby-imploded.zip", "README");
     }
 
     private void testZipStreamWithImplodeCompression(final String filename, final String entryName) throws IOException {
-        final ZipArchiveInputStream zin = new ZipArchiveInputStream(new FileInputStream(new File(filename)));
+        final ZipArchiveInputStream zin = new ZipArchiveInputStream(new FileInputStream(AbstractTestCase.getFile(filename)));
         final ZipArchiveEntry entry = zin.getNextZipEntry();
         assertEquals("entry name", entryName, entry.getName());
         assertTrue("entry can't be read", zin.canReadEntryData(entry));
@@ -86,17 +86,17 @@ public class ExplodeSupportTest {
 
     @Test
     public void testZipStreamWithImplodeCompression4K2Trees() throws IOException {
-        testZipStreamWithImplodeCompression("target/test-classes/imploding-4Kdict-2trees.zip", "HEADER.TXT");
+        testZipStreamWithImplodeCompression("imploding-4Kdict-2trees.zip", "HEADER.TXT");
     }
 
     @Test
     public void testZipStreamWithImplodeCompression8K3Trees() throws IOException {
-        testZipStreamWithImplodeCompression("target/test-classes/imploding-8Kdict-3trees.zip", "LICENSE.TXT");
+        testZipStreamWithImplodeCompression("imploding-8Kdict-3trees.zip", "LICENSE.TXT");
     }
 
     @Test
     public void testTikaTestStream() throws IOException {
-        testZipStreamWithImplodeCompression("target/test-classes/moby-imploded.zip", "README");
+        testZipStreamWithImplodeCompression("moby-imploded.zip", "README");
     }
 
 }
