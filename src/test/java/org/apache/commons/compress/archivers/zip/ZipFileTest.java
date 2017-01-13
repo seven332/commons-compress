@@ -34,7 +34,7 @@ import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 
 import org.apache.commons.compress.utils.IOUtils;
-import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
+import org.apache.commons.compress.utils.MemoryStore;
 import org.junit.After;
 import org.junit.Test;
 
@@ -82,7 +82,7 @@ public class ZipFileTest {
             data = IOUtils.toByteArray(fis);
         }
 
-        zf = new ZipFile(new SeekableInMemoryByteChannel(data), ZipEncodingHelper.UTF8);
+        zf = new ZipFile(new MemoryStore(data), ZipEncodingHelper.UTF8);
         final ArrayList<ZipArchiveEntry> l = Collections.list(zf.getEntries());
         assertEntryName(l, 0, "AbstractUnicodeExtraField");
         assertEntryName(l, 1, "AsiExtraField");

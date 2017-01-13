@@ -35,7 +35,7 @@ import javax.crypto.Cipher;
 import org.apache.commons.compress.AbstractTestCase;
 import org.apache.commons.compress.PasswordRequiredException;
 import org.apache.commons.compress.utils.IOUtils;
-import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
+import org.apache.commons.compress.utils.MemoryStore;
 import org.junit.Test;
 
 public class SevenZFileTest extends AbstractTestCase {
@@ -248,7 +248,7 @@ public class SevenZFileTest extends AbstractTestCase {
         try (FileInputStream fis = new FileInputStream(getFile("bla.7z"))) {
             data = IOUtils.toByteArray(fis);
         }
-        try (SevenZFile sevenZFile = new SevenZFile(new SeekableInMemoryByteChannel(data))) {
+        try (SevenZFile sevenZFile = new SevenZFile(new MemoryStore(data))) {
             final Iterable<SevenZArchiveEntry> entries = sevenZFile.getEntries();
             final Iterator<SevenZArchiveEntry> iter = entries.iterator();
             SevenZArchiveEntry entry = iter.next();

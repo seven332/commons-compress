@@ -17,6 +17,8 @@
  */
 package org.apache.commons.compress.archivers.zip;
 
+import okio.BufferedStore;
+
 import org.apache.commons.compress.parallel.ScatterGatherBackingStore;
 
 import java.io.Closeable;
@@ -24,8 +26,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
@@ -99,13 +99,13 @@ public abstract class StreamCompressor implements Closeable {
     /**
      * Create a stream compressor with the given compression level.
      *
-     * @param os       The SeekableByteChannel to receive output
+     * @param os       The BufferedStore to receive output
      * @param deflater The deflater to use for the compressor
      * @return A stream compressor
      * @since 1.13
      */
-    static StreamCompressor create(final SeekableByteChannel os, final Deflater deflater) {
-        return new SeekableByteChannelCompressor(deflater, os);
+    static StreamCompressor create(final BufferedStore os, final Deflater deflater) {
+        return new BufferedStoreCompressor(deflater, os);
     }
 
     /**
@@ -322,11 +322,11 @@ public abstract class StreamCompressor implements Closeable {
         }
     }
 
-    private static final class SeekableByteChannelCompressor extends StreamCompressor {
-        private final SeekableByteChannel channel;
+    private static final class BufferedStoreCompressor extends StreamCompressor {
+        private final BufferedStore channel;
 
-        public SeekableByteChannelCompressor(final Deflater deflater,
-                                             final SeekableByteChannel channel) {
+        public BufferedStoreCompressor(final Deflater deflater,
+                                       final BufferedStore channel) {
             super(deflater);
             this.channel = channel;
         }
@@ -334,7 +334,7 @@ public abstract class StreamCompressor implements Closeable {
         @Override
         protected final void writeOut(final byte[] data, final int offset, final int length)
                 throws IOException {
-            channel.write(ByteBuffer.wrap(data, offset, length));
+            channel.write(data, offset, length);
         }
     }
 }

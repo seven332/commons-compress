@@ -24,21 +24,20 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.zip.CRC32;
+
+import okio.Buffer;
+import okio.BufferedStore;
+import okio.Okio;
+import okio.Store;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.utils.CountingOutputStream;
@@ -48,7 +47,7 @@ import org.apache.commons.compress.utils.CountingOutputStream;
  * @since 1.6
  */
 public class SevenZOutputFile implements Closeable {
-    private final SeekableByteChannel channel;
+    private final BufferedStore channel;
     private final List<SevenZArchiveEntry> files = new ArrayList<>();
     private int numNonEmptyStreams = 0;
     private final CRC32 crc32 = new CRC32();
@@ -68,25 +67,23 @@ public class SevenZOutputFile implements Closeable {
      * @throws IOException if opening the file fails
      */
     public SevenZOutputFile(final File filename) throws IOException {
-        this(Files.newByteChannel(filename.toPath(),
-            EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE,
-                       StandardOpenOption.TRUNCATE_EXISTING)));
+        this(Okio.store(filename));
     }
 
     /**
      * Prepares channel to write a 7z archive to.
      *
-     * <p>{@link
-     * org.apache.commons.compress.utils.SeekableInMemoryByteChannel}
-     * allows you to write to an in-memory archive.</p>
-     *
      * @param channel the channel to write to
      * @throws IOException if the channel cannot be positioned properly
      * @since 1.13
      */
-    public SevenZOutputFile(final SeekableByteChannel channel) throws IOException {
-        this.channel = channel;
-        channel.position(SevenZFile.SIGNATURE_HEADER_SIZE);
+    public SevenZOutputFile(final Store channel) throws IOException {
+        if (channel instanceof BufferedStore) {
+            this.channel = (BufferedStore) channel;
+        } else {
+            this.channel = Okio.buffer(channel);
+        }
+        channel.seek(SevenZFile.SIGNATURE_HEADER_SIZE);
     }
 
     /**
@@ -249,7 +246,7 @@ public class SevenZOutputFile implements Closeable {
         }
         finished = true;
 
-        final long headerPosition = channel.position();
+        final long headerPosition = channel.tell();
 
         final ByteArrayOutputStream headerBaos = new ByteArrayOutputStream();
         final DataOutputStream header = new DataOutputStream(headerBaos);
@@ -257,36 +254,28 @@ public class SevenZOutputFile implements Closeable {
         writeHeader(header);
         header.flush();
         final byte[] headerBytes = headerBaos.toByteArray();
-        channel.write(ByteBuffer.wrap(headerBytes));
+        channel.write(headerBytes);
 
         final CRC32 crc32 = new CRC32();
         crc32.update(headerBytes);
 
-        ByteBuffer bb = ByteBuffer.allocate(SevenZFile.sevenZSignature.length
-                                            + 2 /* version */
-                                            + 4 /* start header CRC */
-                                            + 8 /* next header position */
-                                            + 8 /* next header length */
-                                            + 4 /* next header CRC */)
-            .order(ByteOrder.LITTLE_ENDIAN);
         // signature header
-        channel.position(0);
-        bb.put(SevenZFile.sevenZSignature);
+        channel.seek(0);
+        channel.write(SevenZFile.sevenZSignature);
         // version
-        bb.put((byte) 0).put((byte) 2);
-
-        // placeholder for start header CRC
-        bb.putInt(0);
+        channel.writeByte((byte) 0).writeByte((byte) 2);
 
         // start header
-        bb.putLong(headerPosition - SevenZFile.SIGNATURE_HEADER_SIZE)
-            .putLong(0xffffFFFFL & headerBytes.length)
-            .putInt((int) crc32.getValue());
+        Buffer buffer = new Buffer();
+        buffer.writeLongLe(headerPosition - SevenZFile.SIGNATURE_HEADER_SIZE)
+            .writeLongLe(0xffffFFFFL & headerBytes.length)
+            .writeIntLe((int) crc32.getValue());
+        byte[] array = buffer.readByteArray();
+        buffer.close();
         crc32.reset();
-        crc32.update(bb.array(), SevenZFile.sevenZSignature.length + 6, 20);
-        bb.putInt(SevenZFile.sevenZSignature.length + 2, (int) crc32.getValue());
-        bb.flip();
-        channel.write(bb);
+        crc32.update(array);
+
+        channel.writeIntLe((int) crc32.getValue()).write(array);
     }
 
     /*
@@ -765,13 +754,9 @@ public class SevenZOutputFile implements Closeable {
     }
 
     private class OutputStreamWrapper extends OutputStream {
-        private static final int BUF_SIZE = 8192;
-        private final ByteBuffer buffer = ByteBuffer.allocate(BUF_SIZE);
         @Override
         public void write(final int b) throws IOException {
-            buffer.clear();
-            buffer.put((byte) b).flip();
-            channel.write(buffer);
+            channel.writeByte(b);
             compressedCrc32.update(b);
             fileBytesWritten++;
         }
@@ -784,13 +769,7 @@ public class SevenZOutputFile implements Closeable {
         @Override
         public void write(final byte[] b, final int off, final int len)
             throws IOException {
-            if (len > BUF_SIZE) {
-                channel.write(ByteBuffer.wrap(b, off, len));
-            } else {
-                buffer.clear();
-                buffer.put(b, off, len).flip();
-                channel.write(buffer);
-            }
+            channel.write(b, off, len);
             compressedCrc32.update(b, off, len);
             fileBytesWritten += len;
         }

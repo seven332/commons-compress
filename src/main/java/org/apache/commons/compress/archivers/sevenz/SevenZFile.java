@@ -26,15 +26,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.zip.CRC32;
+
+import okio.BufferedStore;
+import okio.Okio;
+import okio.Store;
 
 import org.apache.commons.compress.utils.BoundedInputStream;
 import org.apache.commons.compress.utils.CRC32VerifyingInputStream;
@@ -74,7 +74,7 @@ public class SevenZFile implements Closeable {
     static final int SIGNATURE_HEADER_SIZE = 32;
 
     private final String fileName;
-    private SeekableByteChannel channel;
+    private BufferedStore channel;
     private final Archive archive;
     private int currentEntryIndex = -1;
     private int currentFolderIndex = -1;
@@ -98,31 +98,22 @@ public class SevenZFile implements Closeable {
      * @throws IOException if reading the archive fails
      */
     public SevenZFile(final File filename, final byte[] password) throws IOException {
-        this(Files.newByteChannel(filename.toPath(), EnumSet.of(StandardOpenOption.READ)),
-             filename.getAbsolutePath(), password, true);
+        this(Okio.store(filename), filename.getAbsolutePath(), password, true);
     }
 
     /**
      * Reads a SeekableByteChannel as 7z archive
-     *
-     * <p>{@link
-     * org.apache.commons.compress.utils.SeekableInMemoryByteChannel}
-     * allows you to read from an in-memory archive.</p>
      *
      * @param channel the channel to read
      * @throws IOException if reading the archive fails
      * @since 1.13
      */
-    public SevenZFile(final SeekableByteChannel channel) throws IOException {
+    public SevenZFile(final Store channel) throws IOException {
         this(channel, "unknown archive", null);
     }
 
     /**
      * Reads a SeekableByteChannel as 7z archive
-     *
-     * <p>{@link
-     * org.apache.commons.compress.utils.SeekableInMemoryByteChannel}
-     * allows you to read from an in-memory archive.</p>
      *
      * @param channel the channel to read
      * @param password optional password if the archive is encrypted -
@@ -131,17 +122,13 @@ public class SevenZFile implements Closeable {
      * @throws IOException if reading the archive fails
      * @since 1.13
      */
-    public SevenZFile(final SeekableByteChannel channel,
+    public SevenZFile(final Store channel,
                       final byte[] password) throws IOException {
         this(channel, "unknown archive", password);
     }
 
     /**
      * Reads a SeekableByteChannel as 7z archive
-     *
-     * <p>{@link
-     * org.apache.commons.compress.utils.SeekableInMemoryByteChannel}
-     * allows you to read from an in-memory archive.</p>
      *
      * @param channel the channel to read
      * @param filename name of the archive - only used for error reporting
@@ -151,15 +138,19 @@ public class SevenZFile implements Closeable {
      * @throws IOException if reading the archive fails
      * @since 1.13
      */
-    public SevenZFile(final SeekableByteChannel channel, String filename,
+    public SevenZFile(final Store channel, String filename,
                       final byte[] password) throws IOException {
         this(channel, filename, password, false);
     }
 
-    private SevenZFile(final SeekableByteChannel channel, String filename,
+    private SevenZFile(final Store channel, String filename,
                        final byte[] password, boolean closeOnError) throws IOException {
         boolean succeeded = false;
-        this.channel = channel;
+        if (channel instanceof BufferedStore) {
+            this.channel = (BufferedStore) channel;
+        } else {
+            this.channel = Okio.buffer(channel);
+        }
         this.fileName = filename;
         try {
             archive = readHeaders(password);
@@ -264,7 +255,7 @@ public class SevenZFile implements Closeable {
         if (nextHeaderSizeInt != startHeader.nextHeaderSize) {
             throw new IOException("cannot handle nextHeaderSize " + startHeader.nextHeaderSize);
         }
-        channel.position(SIGNATURE_HEADER_SIZE + startHeader.nextHeaderOffset);
+        channel.seek(SIGNATURE_HEADER_SIZE + startHeader.nextHeaderOffset);
         buf = ByteBuffer.allocate(nextHeaderSizeInt).order(ByteOrder.LITTLE_ENDIAN);
         readFully(buf);
         final CRC32 crc = new CRC32();
@@ -351,7 +342,7 @@ public class SevenZFile implements Closeable {
         final long folderOffset = SIGNATURE_HEADER_SIZE + archive.packPos +
                 0;
 
-        channel.position(folderOffset);
+        channel.seek(folderOffset);
         InputStream inputStreamStack = new BoundedSeekableByteChannelInputStream(channel,
                 archive.packSizes[firstPackStreamIndex]);
         for (final Coder coder : folder.getOrderedCoders()) {
@@ -919,7 +910,7 @@ public class SevenZFile implements Closeable {
 
     private InputStream buildDecoderStack(final Folder folder, final long folderOffset,
                 final int firstPackStreamIndex, final SevenZArchiveEntry entry) throws IOException {
-        channel.position(folderOffset);
+        channel.seek(folderOffset);
         InputStream inputStreamStack =
             new BufferedInputStream(
               new BoundedSeekableByteChannelInputStream(channel,

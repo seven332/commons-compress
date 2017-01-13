@@ -20,15 +20,16 @@ package org.apache.commons.compress.archivers.sevenz;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
+
+import okio.BufferedStore;
 
 class BoundedSeekableByteChannelInputStream extends InputStream {
     private static final int MAX_BUF_LEN = 8192;
     private final ByteBuffer buffer;
-    private final SeekableByteChannel channel;
+    private final BufferedStore channel;
     private long bytesRemaining;
 
-    public BoundedSeekableByteChannelInputStream(final SeekableByteChannel channel,
+    public BoundedSeekableByteChannelInputStream(final BufferedStore channel,
             final long size) {
         this.channel = channel;
         this.bytesRemaining = size;
@@ -43,11 +44,11 @@ class BoundedSeekableByteChannelInputStream extends InputStream {
     public int read() throws IOException {
         if (bytesRemaining > 0) {
             --bytesRemaining;
-            int read = read(1);
-            if (read < 0) {
-                return read;
+            if (channel.request(1)) {
+                return channel.readByte() & 0xff;
+            } else {
+                return -1;
             }
-            return buffer.get() & 0xff;
         }
         return -1;
     }
@@ -61,28 +62,11 @@ class BoundedSeekableByteChannelInputStream extends InputStream {
         if (bytesToRead > bytesRemaining) {
             bytesToRead = (int) bytesRemaining;
         }
-        int bytesRead;
-        ByteBuffer buf;
-        if (bytesToRead <= buffer.capacity()) {
-            buf = buffer;
-            bytesRead = read(bytesToRead);
-        } else {
-            buf = ByteBuffer.allocate(bytesToRead);
-            bytesRead = channel.read(buf);
-            buf.flip();
-        }
+        int bytesRead = channel.read(b, off, bytesToRead);
         if (bytesRead >= 0) {
-            buf.get(b, off, bytesRead);
             bytesRemaining -= bytesRead;
         }
         return bytesRead;
-    }
-
-    private int read(int len) throws IOException {
-        buffer.rewind().limit(len);
-        int read = channel.read(buffer);
-        buffer.flip();
-        return read;
     }
 
     @Override

@@ -21,7 +21,6 @@ package org.apache.commons.compress.utils;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Objects;
 
 /**
  * Iterator utilities.
@@ -43,8 +42,8 @@ public class Iterators {
      *         result of this operation
      */
     public static <T> boolean addAll(final Collection<T> collection, final Iterator<? extends T> iterator) {
-        Objects.requireNonNull(collection);
-        Objects.requireNonNull(iterator);
+        if (collection == null) throw new NullPointerException();
+        if (iterator == null) throw new NullPointerException();
         boolean wasModified = false;
         while (iterator.hasNext()) {
             wasModified |= collection.add(iterator.next());

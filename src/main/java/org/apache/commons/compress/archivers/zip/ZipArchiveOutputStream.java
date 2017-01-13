@@ -24,17 +24,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.Calendar;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.ZipException;
+
+import okio.BufferedStore;
+import okio.Okio;
+import okio.Store;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
@@ -57,10 +57,6 @@ import static org.apache.commons.compress.archivers.zip.ZipShort.putShort;
  * functionality of this package, especially internal/external file
  * attributes and extra fields with different layouts for local file
  * data and central directory entries.
- *
- * <p>This class will try to use {@link
- * java.nio.channels.SeekableByteChannel} when it knows that the
- * output is going to go to a file.</p>
  *
  * <p>If SeekableByteChannel cannot be used, this implementation will use
  * a Data Descriptor to store size and CRC information for {@link
@@ -233,7 +229,7 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
     /**
      * Optional random access output.
      */
-    private final SeekableByteChannel channel;
+    private final BufferedStore channel;
 
     private final OutputStream out;
 
@@ -285,13 +281,10 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
     public ZipArchiveOutputStream(final File file) throws IOException {
         def = new Deflater(level, true);
         OutputStream o = null;
-        SeekableByteChannel _channel = null;
+        BufferedStore _channel = null;
         StreamCompressor _streamCompressor = null;
         try {
-            _channel = Files.newByteChannel(file.toPath(),
-                EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE,
-                           StandardOpenOption.READ,
-                           StandardOpenOption.TRUNCATE_EXISTING));
+            _channel = Okio.buffer(Okio.store(file));
             // will never get opened properly when an exception is thrown so doesn't need to get closed
             _streamCompressor = StreamCompressor.create(_channel, def); //NOSONAR
         } catch (final IOException e) {
@@ -308,19 +301,18 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
     /**
      * Creates a new ZIP OutputStream writing to a SeekableByteChannel.
      *
-     * <p>{@link
-     * org.apache.commons.compress.utils.SeekableInMemoryByteChannel}
-     * allows you to write to an in-memory archive using random
-     * access.</p>
-     *
      * @param channel the channel to zip to
      * @throws IOException on error
      * @since 1.13
      */
-    public ZipArchiveOutputStream(SeekableByteChannel channel) throws IOException {
-        this.channel = channel;
+    public ZipArchiveOutputStream(Store channel) throws IOException {
+        if (channel instanceof BufferedStore) {
+            this.channel = (BufferedStore) channel;
+        } else {
+            this.channel = Okio.buffer(channel);
+        }
         def = new Deflater(level, true);
-        streamCompressor = StreamCompressor.create(channel, def);
+        streamCompressor = StreamCompressor.create(this.channel, def);
         out = null;
     }
 
@@ -668,9 +660,9 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
      */
     private void rewriteSizesAndCrc(final boolean actuallyNeedsZip64)
         throws IOException {
-        final long save = channel.position();
+        final long save = channel.tell();
 
-        channel.position(entry.localDataStart);
+        channel.seek(entry.localDataStart);
         writeOut(ZipLong.getBytes(entry.entry.getCrc()));
         if (!hasZip64Extra(entry.entry) || !actuallyNeedsZip64) {
             writeOut(ZipLong.getBytes(entry.entry.getCompressedSize()));
@@ -684,7 +676,7 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
             final ByteBuffer name = getName(entry.entry);
             final int nameLen = name.limit() - name.position();
             // seek to ZIP64 extra, skip header and size information
-            channel.position(entry.localDataStart + 3 * WORD + 2 * SHORT
+            channel.seek(entry.localDataStart + 3 * WORD + 2 * SHORT
                              + nameLen + 2 * SHORT);
             // inside the ZIP64 extra uncompressed size comes
             // first, unlike the LFH, CD or data descriptor
@@ -694,7 +686,7 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
             if (!actuallyNeedsZip64) {
                 // do some cleanup:
                 // * rewrite version needed to extract
-                channel.position(entry.localDataStart  - 5 * SHORT);
+                channel.seek(entry.localDataStart  - 5 * SHORT);
                 writeOut(ZipShort.getBytes(INITIAL_VERSION));
 
                 // * remove ZIP64 extra so it doesn't get written
@@ -710,7 +702,7 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
                 }
             }
         }
-        channel.position(save);
+        channel.seek(save);
     }
 
     /**

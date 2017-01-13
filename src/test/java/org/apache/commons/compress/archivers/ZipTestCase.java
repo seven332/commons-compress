@@ -42,7 +42,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile; 	
 import org.apache.commons.compress.archivers.zip.ZipMethod;
 import org.apache.commons.compress.utils.IOUtils;
-import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
+import org.apache.commons.compress.utils.MemoryStore;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -124,7 +124,7 @@ public final class ZipTestCase extends AbstractTestCase {
         IOUtils.readFully(new FileInputStream(file1), file1Contents);
         IOUtils.readFully(new FileInputStream(file2), file2Contents);
 
-        SeekableInMemoryByteChannel c = new SeekableInMemoryByteChannel();
+        MemoryStore c = new MemoryStore();
         try (ZipArchiveOutputStream os = new ZipArchiveOutputStream(c)) {
             os.putArchiveEntry(new ZipArchiveEntry("testdata/test1.xml"));
             os.write(file1Contents);

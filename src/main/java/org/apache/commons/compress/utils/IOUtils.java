@@ -27,6 +27,9 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
+import okio.Buffer;
+import okio.Source;
+
 /**
  * Utility functions
  * @Immutable (has mutable data but it is write-only)
@@ -195,6 +198,30 @@ public final class IOUtils {
         }
         if (read < expectedLength) {
             throw new EOFException();
+        }
+    }
+
+    /**
+     * Reads {@code b.remaining()} bytes from the given source.
+     *
+     * <p>This method reads repeatedly from the source until the
+     * requested number of bytes are read. This method blocks until
+     * the requested number of bytes are read, the end of the source
+     * is detected, or an exception is thrown.</p>
+     *
+     * @param source the source to read from
+     * @param b the buffer into which the data is read.
+     * @throws IOException - if an I/O error occurs.
+     * @throws EOFException - if the source reaches the end before reading all the bytes.
+     */
+    public static void readFully(Source source, ByteBuffer b) throws IOException {
+        Buffer buffer = new Buffer();
+        try {
+            final int expectedLength = b.remaining();
+            buffer.write(source, expectedLength);
+            buffer.writeTo(new ByteBufferWriter(b));
+        } finally {
+            buffer.close();
         }
     }
 

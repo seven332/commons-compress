@@ -1,5 +1,3 @@
-import java.nio.file.Files
-
 apply plugin: 'java'
 apply plugin: 'maven'
 
@@ -19,10 +17,12 @@ test.dependsOn processTestResources2
 
 repositories {
     jcenter()
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
     compile 'org.tukaani:xz:1.6'
+    compile 'com.github.seven332.okio:okio:d6f613479e'
     testCompile 'junit:junit:4.12'
     testCompile 'org.powermock:powermock-module-junit4:1.6.4'
     testCompile 'org.powermock:powermock-api-mockito:1.6.4'
