@@ -42,7 +42,7 @@ import org.apache.commons.compress.utils.IOUtils;
  * </p>
  * <pre>
  * CPIOArchiveInputStream cpioIn = new CPIOArchiveInputStream(
- *         new FileInputStream(new File(&quot;test.cpio&quot;)));
+ *         Files.newInputStream(Paths.get(&quot;test.cpio&quot;)));
  * CPIOArchiveEntry cpioEntry;
  *
  * while ((cpioEntry = cpioIn.getNextEntry()) != null) {
@@ -329,6 +329,7 @@ public class CpioArchiveInputStream extends ArchiveInputStream implements
         if (this.entry.getFormat() == FORMAT_NEW_CRC) {
             for (int pos = 0; pos < tmpread; pos++) {
                 this.crc += b[pos] & 0xFF;
+                this.crc &= 0xFFFFFFFFL;
             }
         }
         this.entryBytesRead += tmpread;

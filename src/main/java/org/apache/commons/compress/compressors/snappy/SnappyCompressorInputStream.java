@@ -23,7 +23,6 @@ import java.io.InputStream;
 
 import org.apache.commons.compress.compressors.lz77support.AbstractLZ77CompressorInputStream;
 import org.apache.commons.compress.utils.ByteUtils;
-import org.apache.commons.compress.utils.IOUtils;
 
 /**
  * CompressorInputStream for the raw Snappy format.
@@ -96,32 +95,29 @@ public class SnappyCompressorInputStream extends AbstractLZ77CompressorInputStre
         }
         switch (state) {
         case NO_BLOCK:
-            fill(len);
+            fill();
             return read(b, off, len);
         case IN_LITERAL:
             int litLen = readLiteral(b, off, len);
             if (!hasMoreDataInBlock()) {
                 state = State.NO_BLOCK;
             }
-            return litLen;
+            return litLen > 0 ? litLen : read(b, off, len);
         case IN_BACK_REFERENCE:
             int backReferenceLen = readBackReference(b, off, len);
             if (!hasMoreDataInBlock()) {
                 state = State.NO_BLOCK;
             }
-            return backReferenceLen;
+            return backReferenceLen > 0 ? backReferenceLen : read(b, off, len);
         default:
             throw new IOException("Unknown stream state " + state);
         }
     }
 
     /**
-     * Try to fill the buffer with enough bytes to satisfy the current
-     * read request.
-     *
-     * @param len the number of uncompressed bytes to read
+     * Try to fill the buffer with the next block of data.
      */
-    private void fill(final int len) throws IOException {
+    private void fill() throws IOException {
         if (uncompressedBytesRemaining == 0) {
             endReached = true;
             return;
@@ -203,6 +199,9 @@ public class SnappyCompressorInputStream extends AbstractLZ77CompressorInputStre
 
             startBackReference(offset, length);
             state = State.IN_BACK_REFERENCE;
+            break;
+        default:
+            // impossible as TAG_MASK is two bits and all four possible cases have been covered
             break;
         }
     }

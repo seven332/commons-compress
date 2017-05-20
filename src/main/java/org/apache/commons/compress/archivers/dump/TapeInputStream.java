@@ -126,8 +126,12 @@ class TapeInputStream extends FilterInputStream {
             // we need to read from the underlying stream.
             // this will reset readOffset value.
             // return -1 if there's a problem.
-            if ((readOffset == blockSize) && !readBlock(true)) {
-                return -1;
+            if (readOffset == blockSize) {
+                try {
+                    readBlock(true);
+                } catch (ShortFileException sfe) {
+                    return -1;
+                }
             }
 
             int n = 0;
@@ -173,16 +177,19 @@ class TapeInputStream extends FilterInputStream {
             // this will reset readOffset value. We do not perform
             // any decompression if we won't eventually read the data.
             // return -1 if there's a problem.
-            if ((readOffset == blockSize) &&
-                    !readBlock((len - bytes) < blockSize)) {
-                return -1;
+            if (readOffset == blockSize) {
+                try {
+                    readBlock((len - bytes) < blockSize);
+                } catch (ShortFileException sfe) {
+                    return -1;
+                }
             }
 
             long n = 0;
 
             if ((readOffset + (len - bytes)) <= blockSize) {
                 // we can read entirely from the buffer.
-                n = (long) len - bytes;
+                n = len - bytes;
             } else {
                 // copy what we can from the buffer.
                 n = (long) blockSize - readOffset;
@@ -218,8 +225,12 @@ class TapeInputStream extends FilterInputStream {
         // we need to read from the underlying stream. This
         // isn't a problem since it would be the first step in
         // any subsequent read() anyway.
-        if ((readOffset == blockSize) && !readBlock(true)) {
-            return null;
+        if (readOffset == blockSize) {
+            try {
+                readBlock(true);
+            } catch (ShortFileException sfe) {
+                return null;
+            }
         }
 
         // copy data, increment counters.
@@ -252,23 +263,18 @@ class TapeInputStream extends FilterInputStream {
      *
      * @param decompress if false the buffer will not be decompressed.
      *        This is an optimization for longer seeks.
-     * @return false if End-Of-File, else true
      */
-    private boolean readBlock(final boolean decompress) throws IOException {
-        boolean success = true;
-
+    private void readBlock(final boolean decompress) throws IOException {
         if (in == null) {
             throw new IOException("input buffer is closed");
         }
 
         if (!isCompressed || (currBlkIdx == -1)) {
             // file is not compressed
-            success = readFully(blockBuffer, 0, blockSize);
+            readFully(blockBuffer, 0, blockSize);
             bytesRead += blockSize;
         } else {
-            if (!readFully(blockBuffer, 0, 4)) {
-                return false;
-            }
+            readFully(blockBuffer, 0, 4);
             bytesRead += 4;
 
             final int h = DumpArchiveUtil.convert32(blockBuffer, 0);
@@ -276,14 +282,14 @@ class TapeInputStream extends FilterInputStream {
 
             if (!compressed) {
                 // file is compressed but this block is not.
-                success = readFully(blockBuffer, 0, blockSize);
+                readFully(blockBuffer, 0, blockSize);
                 bytesRead += blockSize;
             } else {
                 // this block is compressed.
                 final int flags = (h >> 1) & 0x07;
                 int length = (h >> 4) & 0x0FFFFFFF;
                 final byte[] compBuffer = new byte[length];
-                success = readFully(compBuffer, 0, length);
+                readFully(compBuffer, 0, length);
                 bytesRead += length;
 
                 if (!decompress) {
@@ -327,21 +333,17 @@ class TapeInputStream extends FilterInputStream {
 
         currBlkIdx++;
         readOffset = 0;
-
-        return success;
     }
 
     /**
      * Read buffer
      */
-    private boolean readFully(final byte[] b, final int off, final int len)
+    private void readFully(final byte[] b, final int off, final int len)
         throws IOException {
         final int count = IOUtils.readFully(in, b, off, len);
         if (count < len) {
             throw new ShortFileException();
         }
-
-        return true;
     }
 
     /**

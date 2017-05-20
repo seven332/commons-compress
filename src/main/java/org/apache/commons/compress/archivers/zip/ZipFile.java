@@ -34,11 +34,9 @@ import java.util.Map;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 import java.util.zip.ZipException;
-
 import okio.BufferedStore;
 import okio.Okio;
 import okio.Store;
-
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 
@@ -100,11 +98,6 @@ public class ZipFile implements Closeable {
      */
     private final Map<String, LinkedList<ZipArchiveEntry>> nameMap =
         new HashMap<>(HASH_SIZE);
-
-    private static final class OffsetEntry {
-        private long headerOffset = -1;
-        private long dataOffset = -1;
-    }
 
     /**
      * The encoding to use for filenames and the file comment.
@@ -426,9 +419,8 @@ public class ZipFile implements Closeable {
         if (!(ze instanceof Entry)) {
             return null;
         }
-        final OffsetEntry offsetEntry = ((Entry) ze).getOffsetEntry();
-        final long start = offsetEntry.dataOffset;
-        return new BoundedInputStream(start, ze.getCompressedSize());
+        final long start = ze.getDataOffset();
+        return createBoundedInputStream(start, ze.getCompressedSize());
     }
 
 
@@ -466,12 +458,11 @@ public class ZipFile implements Closeable {
             return null;
         }
         // cast valididty is checked just above
-        final OffsetEntry offsetEntry = ((Entry) ze).getOffsetEntry();
         ZipUtil.checkRequestedFeatures(ze);
-        final long start = offsetEntry.dataOffset;
+        final long start = ze.getDataOffset();
         // doesn't get closed if the method is not supported, but doesn't hold any resources either
         final BoundedInputStream bis =
-            new BoundedInputStream(start, ze.getCompressedSize()); //NOSONAR
+            createBoundedInputStream(start, ze.getCompressedSize()); //NOSONAR
         switch (ZipMethod.getMethodByCode(ze.getMethod())) {
             case STORED:
                 return bis;
@@ -628,8 +619,7 @@ public class ZipFile implements Closeable {
         throws IOException {
         archive.readFully(cfhBuf);
         int off = 0;
-        final OffsetEntry offset = new OffsetEntry();
-        final Entry ze = new Entry(offset);
+        final Entry ze = new Entry();
 
         final int versionMadeBy = ZipShort.getValue(cfhBuf, off);
         off += SHORT;
@@ -688,7 +678,7 @@ public class ZipFile implements Closeable {
         ze.setName(entryEncoding.decode(fileName), fileName);
 
         // LFH offset,
-        offset.headerOffset = ZipLong.getValue(cfhBuf, off);
+        ze.setLocalHeaderOffset(ZipLong.getValue(cfhBuf, off));
         // data offset will be filled later
         entries.add(ze);
 
@@ -696,7 +686,7 @@ public class ZipFile implements Closeable {
         archive.readFully(cdExtraData);
         ze.setCentralDirectoryExtra(cdExtraData);
 
-        setSizesAndOffsetFromZip64Extra(ze, offset, diskStart);
+        setSizesAndOffsetFromZip64Extra(ze, diskStart);
 
         final byte[] comment = new byte[commentLen];
         archive.readFully(comment);
@@ -720,7 +710,6 @@ public class ZipFile implements Closeable {
      * size would be invalid.</p>
      */
     private void setSizesAndOffsetFromZip64Extra(final ZipArchiveEntry ze,
-                                                 final OffsetEntry offset,
                                                  final int diskStart)
         throws IOException {
         final Zip64ExtendedInformationExtraField z64 =
@@ -730,7 +719,7 @@ public class ZipFile implements Closeable {
             final boolean hasUncompressedSize = ze.getSize() == ZIP64_MAGIC;
             final boolean hasCompressedSize = ze.getCompressedSize() == ZIP64_MAGIC;
             final boolean hasRelativeHeaderOffset =
-                offset.headerOffset == ZIP64_MAGIC;
+                ze.getLocalHeaderOffset() == ZIP64_MAGIC;
             z64.reparseCentralDirectoryData(hasUncompressedSize,
                                             hasCompressedSize,
                                             hasRelativeHeaderOffset,
@@ -749,8 +738,7 @@ public class ZipFile implements Closeable {
             }
 
             if (hasRelativeHeaderOffset) {
-                offset.headerOffset =
-                    z64.getRelativeHeaderOffset().getLongValue();
+                ze.setLocalHeaderOffset(z64.getRelativeHeaderOffset().getLongValue());
             }
         }
     }
@@ -1013,8 +1001,7 @@ public class ZipFile implements Closeable {
             // entries is filled in populateFromCentralDirectory and
             // never modified
             final Entry ze = (Entry) zipArchiveEntry;
-            final OffsetEntry offsetEntry = ze.getOffsetEntry();
-            final long offset = offsetEntry.headerOffset;
+            final long offset = ze.getLocalHeaderOffset();
             archive.seek(offset + LFH_OFFSET_FOR_FILENAME_LENGTH);
             archive.readFully(wordBuf);
             shortBuf[0] = wordBuf[0];
@@ -1027,8 +1014,9 @@ public class ZipFile implements Closeable {
             final byte[] localExtraData = new byte[extraFieldLen];
             archive.readFully(localExtraData);
             ze.setExtra(localExtraData);
-            offsetEntry.dataOffset = offset + LFH_OFFSET_FOR_FILENAME_LENGTH
-                + SHORT + SHORT + fileNameLen + extraFieldLen;
+            ze.setDataOffset(offset + LFH_OFFSET_FOR_FILENAME_LENGTH
+                + SHORT + SHORT + fileNameLen + extraFieldLen);
+            ze.setStreamContiguous(true);
 
             if (entriesWithoutUTF8Flag.containsKey(ze)) {
                 final NameAndComment nc = entriesWithoutUTF8Flag.get(ze);
@@ -1057,75 +1045,91 @@ public class ZipFile implements Closeable {
     }
 
     /**
+     * Creates new BoundedInputStream, according to implementation of
+     * underlying archive channel.
+     */
+    private BoundedInputStream createBoundedInputStream(long start, long remaining) {
+        return new BoundedInputStream(start, remaining);
+    }
+
+    /**
      * InputStream that delegates requests to the underlying
      * SeekableByteChannel, making sure that only bytes from a certain
      * range can be read.
      */
     private class BoundedInputStream extends InputStream {
-        private long remaining;
+        private final long end;
         private long loc;
-        private boolean addDummyByte = false;
+        private boolean addDummy = false;
 
         BoundedInputStream(final long start, final long remaining) {
-            this.remaining = remaining;
+            this.end = start+remaining;
+            if (this.end < start) {
+                // check for potential vulnerability due to overflow
+                throw new IllegalArgumentException("Invalid length of stream at offset="+start+", length="+remaining);
+            }
             loc = start;
         }
 
         @Override
-        public int read() throws IOException {
-            if (remaining-- <= 0) {
-                if (addDummyByte) {
-                    addDummyByte = false;
+        public synchronized int read() throws IOException {
+            if (loc >= end) {
+                if (loc == end && addDummy) {
+                    addDummy = false;
                     return 0;
                 }
                 return -1;
             }
+
+            int read;
             synchronized (archive) {
-                archive.seek(loc++);
-                try {
-                    return archive.readByte() & 0xff;
-                } catch (EOFException e) {
-                    return -1;
+                archive.seek(loc);
+                if (archive.request(1)) {
+                    read = archive.readByte() & 0xff;
+                } else {
+                    read = -1;
                 }
             }
+
+            if (read != - 1) {
+                loc++;
+            }
+            return read;
         }
 
         @Override
-        public int read(final byte[] b, final int off, int len) throws IOException {
-            if (remaining <= 0) {
-                if (addDummyByte) {
-                    addDummyByte = false;
-                    b[off] = 0;
-                    return 1;
-                }
-                return -1;
-            }
-
+        public synchronized int read(final byte[] b, final int off, int len) throws IOException {
             if (len <= 0) {
                 return 0;
             }
 
-            if (len > remaining) {
-                len = (int) remaining;
+            if (len > end-loc) {
+                if (loc >= end) {
+                    if (loc == end && addDummy) {
+                        addDummy = false;
+                        b[off] = 0;
+                        return 1;
+                    }
+                    return -1;
+                }
+                len = (int)(end-loc);
             }
-            int ret = -1;
+
+            int ret;
             synchronized (archive) {
                 archive.seek(loc);
                 ret = archive.read(b, off, len);
             }
+
             if (ret > 0) {
                 loc += ret;
-                remaining -= ret;
+                return ret;
             }
             return ret;
         }
 
-        /**
-         * Inflater needs an extra dummy byte for nowrap - see
-         * Inflater's javadocs.
-         */
-        void addDummy() {
-            addDummyByte = true;
+        synchronized void addDummy() {
+            this.addDummy = true;
         }
     }
 
@@ -1162,8 +1166,8 @@ public class ZipFile implements Closeable {
             if (ent2 == null) {
                 return -1;
             }
-            final long val = (ent1.getOffsetEntry().headerOffset
-                        - ent2.getOffsetEntry().headerOffset);
+            final long val = (ent1.getLocalHeaderOffset()
+                        - ent2.getLocalHeaderOffset());
             return val == 0 ? 0 : val < 0 ? -1 : +1;
         }
     };
@@ -1173,20 +1177,13 @@ public class ZipFile implements Closeable {
      */
     private static class Entry extends ZipArchiveEntry {
 
-        private final OffsetEntry offsetEntry;
-
-        Entry(final OffsetEntry offset) {
-            this.offsetEntry = offset;
-        }
-
-        OffsetEntry getOffsetEntry() {
-            return offsetEntry;
+        Entry() {
         }
 
         @Override
         public int hashCode() {
             return 3 * super.hashCode()
-                + (int) (offsetEntry.headerOffset % Integer.MAX_VALUE);
+                + (int) getLocalHeaderOffset()+(int)(getLocalHeaderOffset()>>32);
         }
 
         @Override
@@ -1194,10 +1191,10 @@ public class ZipFile implements Closeable {
             if (super.equals(other)) {
                 // super.equals would return false if other were not an Entry
                 final Entry otherEntry = (Entry) other;
-                return offsetEntry.headerOffset
-                        == otherEntry.offsetEntry.headerOffset
-                    && offsetEntry.dataOffset
-                        == otherEntry.offsetEntry.dataOffset;
+                return getLocalHeaderOffset()
+                        == otherEntry.getLocalHeaderOffset()
+                    && getDataOffset()
+                        == otherEntry.getDataOffset();
             }
             return false;
         }

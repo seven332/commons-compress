@@ -61,6 +61,66 @@ The <action> type attribute can be add,update,fix,remove.
         ZipArchiveEntry#isUnixSymlink now only returns true if the
         corresponding link flag is the only file-type flag set.
       </action>
+      <action issue="COMPRESS-271" type="add" date="2017-02-07">
+        Added support for LZ4 (block and frame format).
+      </action>
+      <action type="update" date="2017-02-15" due-to="Thomas Meyer">
+        BZip2CompressorInputstream now uses BitInputStream internally.
+        Pull Request #13.
+      </action>
+      <action type="fix" date="2017-03-29" due-to="Daniel Collin">
+        Fixed an integer overflow in CPIO's CRC calculation.
+        Pull Request #17.
+      </action>
+      <action issue="COMPRESS-385" type="add" date="2017-04-18">
+        Add static detect(InputStream in) to CompressorStreamFactory
+        and ArchiveStreamFactory
+      </action>
+      <action issue="COMPRESS-387" type="fix" date="2017-04-18">
+        Make unit tests work on Windows paths with spaces in their names.
+      </action>
+      <action issue="COMPRESS-388" type="update" date="2017-04-25"
+              due-to="Zbynek Vyskovsky">
+        Improved performance for concurrent reads from ZipFile when
+        reading from a file.
+      </action>
+      <action issue="COMPRESS-382" type="add" date="2017-04-25"
+              due-to="Tim Allison">
+        Added a way to limit amount of memory ZCompressorStream may
+        use.
+      </action>
+      <action issue="COMPRESS-386" type="add" date="2017-04-25"
+              due-to="Tim Allison">
+        Added a way to limit amount of memory ZCompressorStream may
+        use.
+      </action>
+      <action issue="COMPRESS-382" type="add" date="2017-04-25"
+              due-to="Tim Allison">
+        Added a way to limit amount of memory LZMACompressorStream and
+        XZCompressorInputStream may use.
+      </action>
+      <action issue="COMPRESS-389" type="fix" date="2017-04-26">
+        Internal location pointer in ZipFile could get incremented
+        even if nothing had been read.
+      </action>
+      <action issue="COMPRESS-392" type="add" date="2017-05-02" due-to="Philippe Mouawad">
+        Add Brotli decoder based on the Google Brotli library.
+      </action>
+      <action issue="COMPRESS-390" type="add" date="2017-05-04"
+              due-to="Zbynek Vyskovsky">
+        ZipEntry now exposes its data offset.
+      </action>
+      <action issue="COMPRESS-393" type="fix" date="2017-05-07">
+        LZMACompressorOutputStream#flush would throw an exception
+        rather than be the NOP it promised to be.
+      </action>
+      <action issue="COMPRESS-391" type="add" date="2017-05-11"
+              due-to="Zbynek Vyskovsky">
+        Using ZipArchiveEntry's setAlignment it is now possible to
+        ensure the data offset of an entry starts at a file position
+        that at word or page boundaries.
+        A new extra field has been added for this purpose.
+      </action>
     </release>
     <release version="1.13" date="2016-12-29"
              description="Release 1.13 - API compatible to 1.12 but requires Java 7 at runtime.">

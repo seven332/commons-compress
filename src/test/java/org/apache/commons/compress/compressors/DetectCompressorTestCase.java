@@ -19,16 +19,20 @@
 package org.apache.commons.compress.compressors;
 
 import static org.apache.commons.compress.AbstractTestCase.getFile;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
-import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorInputStream;
-import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.apache.commons.compress.MemoryLimitException;
+import org.apache.commons.compress.MockEvilInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.deflate.DeflateCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -118,6 +122,105 @@ public final class DetectCompressorTestCase {
     }
 
     @Test
+    public void testDetect() throws Exception {
+
+        assertEquals(CompressorStreamFactory.BZIP2, detect("bla.txt.bz2"));
+        assertEquals(CompressorStreamFactory.GZIP, detect("bla.tgz"));
+        assertEquals(CompressorStreamFactory.PACK200, detect("bla.pack"));
+        assertEquals(CompressorStreamFactory.XZ, detect("bla.tar.xz"));
+        assertEquals(CompressorStreamFactory.DEFLATE, detect("bla.tar.deflatez"));
+        assertEquals(CompressorStreamFactory.LZ4_FRAMED, detect("bla.tar.lz4"));
+        assertEquals(CompressorStreamFactory.LZMA, detect("bla.tar.lzma"));
+        assertEquals(CompressorStreamFactory.SNAPPY_FRAMED, detect("bla.tar.sz"));
+        assertEquals(CompressorStreamFactory.Z, detect("bla.tar.Z"));
+
+        //make sure we don't oom on detect
+        assertEquals(CompressorStreamFactory.Z, detect("COMPRESS-386"));
+        assertEquals(CompressorStreamFactory.LZMA, detect("COMPRESS-382"));
+
+        try {
+            CompressorStreamFactory.detect(new BufferedInputStream(new ByteArrayInputStream(new byte[0])));
+            fail("shouldn't be able to detect empty stream");
+        } catch (CompressorException e) {
+            assertEquals("No Compressor found for the stream signature.", e.getMessage());
+        }
+
+        try {
+            CompressorStreamFactory.detect(null);
+            fail("shouldn't be able to detect null stream");
+        } catch (IllegalArgumentException e) {
+            assertEquals("Stream must not be null.", e.getMessage());
+        }
+
+        try {
+            CompressorStreamFactory.detect(new BufferedInputStream(new MockEvilInputStream()));
+            fail("Expected IOException");
+        } catch (CompressorException e) {
+            assertEquals("IOException while reading signature.", e.getMessage());
+        }
+
+
+    }
+
+    private String detect(String testFileName) throws IOException, CompressorException {
+        String name = null;
+        try (InputStream is = new BufferedInputStream(
+                new FileInputStream(getFile(testFileName)))) {
+            name = CompressorStreamFactory.detect(is);
+        }
+        return name;
+    }
+
+    @Test(expected = MemoryLimitException.class)
+    public void testLZMAMemoryLimit() throws Exception {
+        getStreamFor("COMPRESS-382", 100);
+    }
+
+    @Test(expected = MemoryLimitException.class)
+    public void testZMemoryLimit() throws Exception {
+        getStreamFor("COMPRESS-386", 100);
+    }
+
+    @Test(expected = MemoryLimitException.class)
+    public void testXZMemoryLimitOnRead() throws Exception {
+        //Even though the file is very small, the memory limit
+        //has to be quite large (8296 KiB) because of the dictionary size
+
+        //This is triggered on read(); not during initialization.
+        //This test is here instead of the xz unit test to make sure
+        //that the parameter is properly passed via the CompressorStreamFactory
+        try (InputStream compressorIs = getStreamFor("bla.tar.xz", 100)) {
+            compressorIs.read();
+        }
+    }
+
+    @Test(expected = MemoryLimitException.class)
+    public void testXZMemoryLimitOnSkip() throws Exception {
+        try (InputStream compressorIs = getStreamFor("bla.tar.xz", 100)) {
+            compressorIs.skip(10);
+        }
+    }
+
+    private InputStream getStreamFor(final String fileName, final int memoryLimitInKb) throws Exception {
+        CompressorStreamFactory fac = new CompressorStreamFactory(true,
+                memoryLimitInKb);
+        InputStream is = new BufferedInputStream(
+                new FileInputStream(getFile(fileName)));
+        try {
+            return fac.createCompressorInputStream(is);
+        } catch (CompressorException e) {
+            if (e.getCause() != null && e.getCause() instanceof Exception) {
+                //unwrap cause to reveal MemoryLimitException
+                throw (Exception)e.getCause();
+            } else {
+                throw e;
+            }
+        }
+
+    }
+
+
+    @Test
     public void testOverride() {
         CompressorStreamFactory fac = new CompressorStreamFactory();
         assertFalse(fac.getDecompressConcatenated());
@@ -173,5 +276,4 @@ public final class DetectCompressorTestCase {
                    new BufferedInputStream(new FileInputStream(
                        getFile(resource))));
     }
-
 }

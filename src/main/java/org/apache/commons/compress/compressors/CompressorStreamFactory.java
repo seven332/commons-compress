@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.commons.compress.compressors.brotli.BrotliCompressorInputStream;
+import org.apache.commons.compress.compressors.brotli.BrotliUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.deflate.DeflateCompressorInputStream;
@@ -38,6 +40,9 @@ import org.apache.commons.compress.compressors.deflate.DeflateCompressorOutputSt
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.compressors.lz4.BlockLZ4CompressorInputStream;
+import org.apache.commons.compress.compressors.lz4.BlockLZ4CompressorOutputStream;
+import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream;
+import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorOutputStream;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
 import org.apache.commons.compress.compressors.lzma.LZMACompressorOutputStream;
 import org.apache.commons.compress.compressors.lzma.LZMAUtils;
@@ -65,20 +70,20 @@ import org.apache.commons.compress.utils.Sets;
  * Example (Compressing a file):
  * 
  * <pre>
- * final OutputStream out = new FileOutputStream(output);
+ * final OutputStream out = Files.newOutputStream(output.toPath());
  * CompressorOutputStream cos = new CompressorStreamFactory()
  *         .createCompressorOutputStream(CompressorStreamFactory.BZIP2, out);
- * IOUtils.copy(new FileInputStream(input), cos);
+ * IOUtils.copy(Files.newInputStream(input.toPath()), cos);
  * cos.close();
  * </pre>
  * 
  * Example (Decompressing a file):
  * 
  * <pre>
- * final InputStream is = new FileInputStream(input);
+ * final InputStream is = Files.newInputStream(input.toPath());
  * CompressorInputStream in = new CompressorStreamFactory().createCompressorInputStream(CompressorStreamFactory.BZIP2,
  *         is);
- * IOUtils.copy(in, new FileOutputStream(output));
+ * IOUtils.copy(in, Files.newOutputStream(output.toPath()));
  * in.close();
  * </pre>
  * 
@@ -90,6 +95,16 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
 
     private static final CompressorStreamFactory SINGLETON = new CompressorStreamFactory();
 
+
+
+    /**
+     * Constant (value {@value}) used to identify the BROTLI compression
+     * algorithm.
+     * 
+     * @since 1.14
+     */
+    public static final String BROTLI = "br";
+    
     /**
      * Constant (value {@value}) used to identify the BZIP2 compression
      * algorithm.
@@ -161,11 +176,19 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
 
     /**
      * Constant (value {@value}) used to identify the block LZ4
-     * compression method. Not supported as an output stream type.
+     * compression method.
      *
      * @since 1.14
      */
     public static final String LZ4_BLOCK = "lz4-block";
+
+    /**
+     * Constant (value {@value}) used to identify the frame LZ4
+     * compression method.
+     *
+     * @since 1.14
+     */
+    public static final String LZ4_FRAMED = "lz4-framed";
 
     /**
      * Constructs a new sorted map from input stream provider names to provider
@@ -252,6 +275,10 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
     private static ArrayList<CompressorStreamProvider> findCompressorStreamProviders() {
         return Lists.newArrayList(serviceLoaderIterator());
     }
+
+    public static String getBrotli() {
+        return BROTLI;
+    }
     
     public static String getBzip2() {
         return BZIP2;
@@ -293,6 +320,14 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
         return Z;
     }
 
+    public static String getLZ4Framed() {
+        return LZ4_FRAMED;
+    }
+
+    public static String getLZ4Block() {
+        return LZ4_BLOCK;
+    }
+
     static void putAll(final Set<String> names, final CompressorStreamProvider provider,
             final TreeMap<String, CompressorStreamProvider> map) {
         for (final String name : names) {
@@ -330,12 +365,39 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
      */
     private volatile boolean decompressConcatenated = false;
 
+    private final int memoryLimitInKb;
     /**
      * Create an instance with the decompress Concatenated option set to false.
      */
     public CompressorStreamFactory() {
         this.decompressUntilEOF = null;
+        this.memoryLimitInKb = -1;
     }
+
+    /**
+     * Create an instance with the provided decompress Concatenated option.
+     *
+     * @param decompressUntilEOF
+     *            if true, decompress until the end of the input; if false, stop
+     *            after the first stream and leave the input position to point
+     *            to the next byte after the stream. This setting applies to the
+     *            gzip, bzip2 and xz formats only.
+     *
+     * @param memoryLimitInKb
+     *            Some streams require allocation of potentially significant
+     *            byte arrays/tables, and they can offer checks to prevent OOMs
+     *            on corrupt files.  Set the maximum allowed memory allocation in KBs.
+     *
+     * @since 1.14
+     */
+    public CompressorStreamFactory(final boolean decompressUntilEOF, final int memoryLimitInKb) {
+        this.decompressUntilEOF = Boolean.valueOf(decompressUntilEOF);
+        // Also copy to existing variable so can continue to use that as the
+        // current value
+        this.decompressConcatenated = decompressUntilEOF;
+        this.memoryLimitInKb = memoryLimitInKb;
+    }
+
 
     /**
      * Create an instance with the provided decompress Concatenated option.
@@ -348,12 +410,77 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
      * @since 1.10
      */
     public CompressorStreamFactory(final boolean decompressUntilEOF) {
-        this.decompressUntilEOF = Boolean.valueOf(decompressUntilEOF);
-        // Also copy to existing variable so can continue to use that as the
-        // current value
-        this.decompressConcatenated = decompressUntilEOF;
+        this(decompressUntilEOF, -1);
     }
 
+    /**
+     * Try to detect the type of compressor stream.
+     *
+     * @param in input stream
+     * @return type of compressor stream detected
+     * @throws CompressorException if no compressor stream type was detected
+     *                             or if something else went wrong
+     * @throws IllegalArgumentException if stream is null or does not support mark
+     *
+     * @since 1.14
+     */
+    public static String detect(final InputStream in) throws CompressorException {
+        if (in == null) {
+            throw new IllegalArgumentException("Stream must not be null.");
+        }
+
+        if (!in.markSupported()) {
+            throw new IllegalArgumentException("Mark is not supported.");
+        }
+
+        final byte[] signature = new byte[12];
+        in.mark(signature.length);
+        int signatureLength = -1;
+        try {
+            signatureLength = IOUtils.readFully(in, signature);
+            in.reset();
+        } catch (IOException e) {
+            throw new CompressorException("IOException while reading signature.", e);
+        }
+
+        if (BZip2CompressorInputStream.matches(signature, signatureLength)) {
+            return BZIP2;
+        }
+
+        if (GzipCompressorInputStream.matches(signature, signatureLength)) {
+            return GZIP;
+        }
+
+        if (Pack200CompressorInputStream.matches(signature, signatureLength)) {
+            return PACK200;
+        }
+
+        if (FramedSnappyCompressorInputStream.matches(signature, signatureLength)) {
+            return SNAPPY_FRAMED;
+        }
+
+        if (ZCompressorInputStream.matches(signature, signatureLength)) {
+            return Z;
+        }
+
+        if (DeflateCompressorInputStream.matches(signature, signatureLength)) {
+            return DEFLATE;
+        }
+
+        if (XZUtils.matches(signature, signatureLength)) {
+            return XZ;
+        }
+
+        if (LZMAUtils.matches(signature, signatureLength)) {
+            return LZMA;
+        }
+
+        if (FramedLZ4CompressorInputStream.matches(signature, signatureLength)) {
+            return LZ4_FRAMED;
+        }
+
+        throw new CompressorException("No Compressor found for the stream signature.");
+    }
     /**
      * Create an compressor input stream from an input stream, autodetecting the
      * compressor type from the first few bytes of the stream. The InputStream
@@ -369,57 +496,7 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
      * @since 1.1
      */
     public CompressorInputStream createCompressorInputStream(final InputStream in) throws CompressorException {
-        if (in == null) {
-            throw new IllegalArgumentException("Stream must not be null.");
-        }
-
-        if (!in.markSupported()) {
-            throw new IllegalArgumentException("Mark is not supported.");
-        }
-
-        final byte[] signature = new byte[12];
-        in.mark(signature.length);
-        try {
-            final int signatureLength = IOUtils.readFully(in, signature);
-            in.reset();
-
-            if (BZip2CompressorInputStream.matches(signature, signatureLength)) {
-                return new BZip2CompressorInputStream(in, decompressConcatenated);
-            }
-
-            if (GzipCompressorInputStream.matches(signature, signatureLength)) {
-                return new GzipCompressorInputStream(in, decompressConcatenated);
-            }
-
-            if (Pack200CompressorInputStream.matches(signature, signatureLength)) {
-                return new Pack200CompressorInputStream(in);
-            }
-
-            if (FramedSnappyCompressorInputStream.matches(signature, signatureLength)) {
-                return new FramedSnappyCompressorInputStream(in);
-            }
-
-            if (ZCompressorInputStream.matches(signature, signatureLength)) {
-                return new ZCompressorInputStream(in);
-            }
-
-            if (DeflateCompressorInputStream.matches(signature, signatureLength)) {
-                return new DeflateCompressorInputStream(in);
-            }
-
-            if (XZUtils.matches(signature, signatureLength) && XZUtils.isXZCompressionAvailable()) {
-                return new XZCompressorInputStream(in, decompressConcatenated);
-            }
-
-            if (LZMAUtils.matches(signature, signatureLength) && LZMAUtils.isLZMACompressionAvailable()) {
-                return new LZMACompressorInputStream(in);
-            }
-
-        } catch (final IOException e) {
-            throw new CompressorException("Failed to detect Compressor from InputStream.", e);
-        }
-
-        throw new CompressorException("No Compressor found for the stream signature.");
+        return createCompressorInputStream(detect(in), in);
     }
 
     /**
@@ -430,13 +507,15 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
      *            of the compressor, i.e. {@value #GZIP}, {@value #BZIP2},
      *            {@value #XZ}, {@value #LZMA}, {@value #PACK200},
      *            {@value #SNAPPY_RAW}, {@value #SNAPPY_FRAMED}, {@value #Z},
-     *            {@value #LZ4_BLOCK}
+     *            {@value #LZ4_BLOCK}, {@value #LZ4_FRAMED}
      *            or {@value #DEFLATE}
      * @param in
      *            the input stream
      * @return compressor input stream
      * @throws CompressorException
-     *             if the compressor name is not known
+     *             if the compressor name is not known or not available,
+     *             or if there's an IOException or MemoryLimitException thrown
+     *             during initialization
      * @throws IllegalArgumentException
      *             if the name or input stream is null
      */
@@ -461,13 +540,26 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
             if (BZIP2.equalsIgnoreCase(name)) {
                 return new BZip2CompressorInputStream(in, actualDecompressConcatenated);
             }
+            
+            if (BROTLI.equalsIgnoreCase(name)) {
+                if (!BrotliUtils.isBrotliCompressionAvailable()) {
+                    throw new CompressorException("Brotli compression is not available.");
+                }
+                return new BrotliCompressorInputStream(in);
+            }
 
             if (XZ.equalsIgnoreCase(name)) {
-                return new XZCompressorInputStream(in, actualDecompressConcatenated);
+                if (!XZUtils.isXZCompressionAvailable()) {
+                    throw new CompressorException("XZ compression is not available.");
+                }
+                return new XZCompressorInputStream(in, actualDecompressConcatenated, memoryLimitInKb);
             }
 
             if (LZMA.equalsIgnoreCase(name)) {
-                return new LZMACompressorInputStream(in);
+                if (!LZMAUtils.isLZMACompressionAvailable()) {
+                    throw new CompressorException("LZMA compression is not available");
+                }
+                return new LZMACompressorInputStream(in, memoryLimitInKb);
             }
 
             if (PACK200.equalsIgnoreCase(name)) {
@@ -483,7 +575,7 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
             }
 
             if (Z.equalsIgnoreCase(name)) {
-                return new ZCompressorInputStream(in);
+                return new ZCompressorInputStream(in, memoryLimitInKb);
             }
 
             if (DEFLATE.equalsIgnoreCase(name)) {
@@ -492,6 +584,10 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
 
             if (LZ4_BLOCK.equalsIgnoreCase(name)) {
                 return new BlockLZ4CompressorInputStream(in);
+            }
+
+            if (LZ4_FRAMED.equalsIgnoreCase(name)) {
+                return new FramedLZ4CompressorInputStream(in, actualDecompressConcatenated);
             }
 
         } catch (final IOException e) {
@@ -511,7 +607,8 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
      * 
      * @param name
      *            the compressor name, i.e. {@value #GZIP}, {@value #BZIP2},
-     *            {@value #XZ}, {@value #PACK200}, {@value SNAPPY_FRAMED}
+     *            {@value #XZ}, {@value #PACK200}, {@value #SNAPPY_FRAMED},
+     *            {@value #LZ4_BLOCK}, {@value #LZ4_FRAMED}
      *            or {@value #DEFLATE}
      * @param out
      *            the output stream
@@ -558,6 +655,14 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
                 return new FramedSnappyCompressorOutputStream(out);
             }
 
+            if (LZ4_BLOCK.equalsIgnoreCase(name)) {
+                return new BlockLZ4CompressorOutputStream(out);
+            }
+
+            if (LZ4_FRAMED.equalsIgnoreCase(name)) {
+                return new FramedLZ4CompressorOutputStream(out);
+            }
+
         } catch (final IOException e) {
             throw new CompressorException("Could not create CompressorOutputStream", e);
         }
@@ -595,12 +700,13 @@ public class CompressorStreamFactory implements CompressorStreamProvider {
 
     @Override
     public Set<String> getInputStreamCompressorNames() {
-        return Sets.newHashSet(GZIP, BZIP2, XZ, LZMA, PACK200, SNAPPY_RAW, SNAPPY_FRAMED, Z, DEFLATE);
+        return Sets.newHashSet(GZIP, BROTLI, BZIP2, XZ, LZMA, PACK200, DEFLATE, SNAPPY_RAW, SNAPPY_FRAMED, Z, LZ4_BLOCK,
+            LZ4_FRAMED);
     }
 
     @Override
     public Set<String> getOutputStreamCompressorNames() {
-        return Sets.newHashSet(GZIP, BZIP2, XZ, LZMA, PACK200, DEFLATE, SNAPPY_FRAMED);
+        return Sets.newHashSet(GZIP, BZIP2, XZ, LZMA, PACK200, DEFLATE, SNAPPY_FRAMED, LZ4_BLOCK, LZ4_FRAMED);
     }
 
     /**

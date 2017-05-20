@@ -1018,8 +1018,8 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
             addUnicodeExtraFields(ze, encodable, name);
         }
 
-        final byte[] localHeader = createLocalFileHeader(ze, name, encodable, phased);
         final long localHeaderStart = streamCompressor.getTotalBytesWritten();
+        final byte[] localHeader = createLocalFileHeader(ze, name, encodable, phased, localHeaderStart);
         offsets.put(ze, localHeaderStart);
         entry.localDataStart = localHeaderStart + LFH_CRC_OFFSET; // At crc offset
         writeCounted(localHeader);
@@ -1028,10 +1028,33 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
 
 
     private byte[] createLocalFileHeader(final ZipArchiveEntry ze, final ByteBuffer name, final boolean encodable,
-                                         final boolean phased)  {
+                                         final boolean phased, long archiveOffset) throws IOException {
+        ResourceAlignmentExtraField oldAlignmentEx =
+            (ResourceAlignmentExtraField) ze.getExtraField(ResourceAlignmentExtraField.ID);
+        if (oldAlignmentEx != null) {
+            ze.removeExtraField(ResourceAlignmentExtraField.ID);
+        }
+
+        int alignment = ze.getAlignment();
+        if (alignment <= 0 && oldAlignmentEx != null) {
+            alignment = oldAlignmentEx.getAlignment();
+        }
+
+        if (alignment > 1 || (oldAlignmentEx != null && !oldAlignmentEx.allowMethodChange())) {
+            int oldLength = LFH_FILENAME_OFFSET +
+                            name.limit() - name.position() +
+                            ze.getLocalFileDataExtra().length;
+
+            int padding = (int) ((-archiveOffset - oldLength - ZipExtraField.EXTRAFIELD_HEADER_SIZE
+                            - ResourceAlignmentExtraField.BASE_SIZE) &
+                            (alignment - 1));
+            ze.addExtraField(new ResourceAlignmentExtraField(alignment,
+                            oldAlignmentEx != null && oldAlignmentEx.allowMethodChange(), padding));
+        }
+
         final byte[] extra = ze.getLocalFileDataExtra();
         final int nameLen = name.limit() - name.position();
-        final int len= LFH_FILENAME_OFFSET + nameLen + extra.length;
+        final int len = LFH_FILENAME_OFFSET + nameLen + extra.length;
         final byte[] buf = new byte[len];
 
         System.arraycopy(LFH_SIG,  0, buf, LFH_SIG_OFFSET, WORD);
@@ -1089,7 +1112,9 @@ public class ZipArchiveOutputStream extends ArchiveOutputStream {
         // file name
         System.arraycopy( name.array(), name.arrayOffset(), buf, LFH_FILENAME_OFFSET, nameLen);
 
+        // extra fields
         System.arraycopy(extra, 0, buf, LFH_FILENAME_OFFSET + nameLen, extra.length);
+
         return buf;
     }
 

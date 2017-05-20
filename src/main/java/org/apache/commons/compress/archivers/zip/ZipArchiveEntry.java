@@ -18,6 +18,7 @@
 package org.apache.commons.compress.archivers.zip;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.EntryStreamOffsets;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -48,7 +49,8 @@ import java.util.zip.ZipException;
  * @NotThreadSafe
  */
 public class ZipArchiveEntry extends java.util.zip.ZipEntry
-    implements ArchiveEntry {
+    implements ArchiveEntry, EntryStreamOffsets
+{
 
     public static final int PLATFORM_UNIX = 3;
     public static final int PLATFORM_FAT  = 0;
@@ -83,12 +85,17 @@ public class ZipArchiveEntry extends java.util.zip.ZipEntry
     private int platform = PLATFORM_FAT;
     private int rawFlag;
     private long externalAttributes = 0;
+    private int alignment = 0;
     private ZipExtraField[] extraFields;
     private UnparseableExtraFieldData unparseableExtra = null;
     private String name = null;
     private byte[] rawName = null;
     private GeneralPurposeBit gpb = new GeneralPurposeBit();
     private static final ZipExtraField[] noExtraFields = new ZipExtraField[0];
+    private long localHeaderOffset = OFFSET_UNKNOWN;
+    private long dataOffset = OFFSET_UNKNOWN;
+    private boolean isStreamContiguous = false;
+
 
     /**
      * Creates a new zip entry with the specified name.
@@ -314,6 +321,32 @@ public class ZipArchiveEntry extends java.util.zip.ZipEntry
      */
     protected void setPlatform(final int platform) {
         this.platform = platform;
+    }
+
+    /**
+     * Gets currently configured alignment.
+     *
+     * @return
+     *      alignment for this entry.
+     * @since 1.14
+     */
+    protected int getAlignment() {
+        return this.alignment;
+    }
+
+    /**
+     * Sets alignment for this entry.
+     *
+     * @param alignment
+     *      requested alignment, 0 for default.
+     * @since 1.14
+     */
+    public void setAlignment(int alignment) {
+        if ((alignment & (alignment - 1)) != 0 || alignment > 0xffff) {
+            throw new IllegalArgumentException("Invalid value for alignment, must be power of two and no bigger than "
+                + 0xffff + " but is " + alignment);
+        }
+        this.alignment = alignment;
     }
 
     /**
@@ -678,6 +711,38 @@ public class ZipArchiveEntry extends java.util.zip.ZipEntry
         return null;
     }
 
+    protected long getLocalHeaderOffset() {
+        return this.localHeaderOffset;
+    }
+
+    protected void setLocalHeaderOffset(long localHeaderOffset) {
+        this.localHeaderOffset = localHeaderOffset;
+    }
+
+    @Override
+    public long getDataOffset() {
+        return dataOffset;
+    }
+
+    /**
+     * Sets the data offset.
+     *
+     * @param dataOffset
+     *      new value of data offset.
+     */
+    protected void setDataOffset(long dataOffset) {
+        this.dataOffset = dataOffset;
+    }
+
+    @Override
+    public boolean isStreamContiguous() {
+        return isStreamContiguous;
+    }
+
+    protected void setStreamContiguous(boolean isStreamContiguous) {
+        this.isStreamContiguous = isStreamContiguous;
+    }
+
     /**
      * Get the hashCode of the entry.
      * This uses the name as the hashcode.
@@ -801,6 +866,8 @@ public class ZipArchiveEntry extends java.util.zip.ZipEntry
                              other.getCentralDirectoryExtra())
             && Arrays.equals(getLocalFileDataExtra(),
                              other.getLocalFileDataExtra())
+            && localHeaderOffset == other.localHeaderOffset
+            && dataOffset == other.dataOffset
             && gpb.equals(other.gpb);
     }
 

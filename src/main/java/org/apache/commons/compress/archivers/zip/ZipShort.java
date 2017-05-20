@@ -19,18 +19,21 @@ package org.apache.commons.compress.archivers.zip;
 
 import java.io.Serializable;
 
-import static org.apache.commons.compress.archivers.zip.ZipConstants.BYTE_MASK;
+import org.apache.commons.compress.utils.ByteUtils;
 
 /**
  * Utility class that represents a two byte integer with conversion
- * rules for the big endian byte order of ZIP files.
+ * rules for the little endian byte order of ZIP files.
  * @Immutable
  */
 public final class ZipShort implements Cloneable, Serializable {
-    private static final long serialVersionUID = 1L;
+    /**
+     * ZipShort with a value of 0.
+     * @since 1.14
+     */
+    public static final ZipShort ZERO = new ZipShort(0);
 
-    private static final int BYTE_1_MASK = 0xFF00;
-    private static final int BYTE_1_SHIFT = 8;
+    private static final long serialVersionUID = 1L;
 
     private final int value;
 
@@ -65,8 +68,7 @@ public final class ZipShort implements Cloneable, Serializable {
      */
     public byte[] getBytes() {
         final byte[] result = new byte[2];
-        result[0] = (byte) (value & BYTE_MASK);
-        result[1] = (byte) ((value & BYTE_1_MASK) >> BYTE_1_SHIFT);
+        ByteUtils.toLittleEndian(result, value, 0, 2);
         return result;
     }
 
@@ -98,8 +100,7 @@ public final class ZipShort implements Cloneable, Serializable {
      *         must be non-negative and no larger than <tt>buf.length-2</tt>
      */
     public static void putShort(final int value, final byte[] buf, final int offset) {
-        buf[offset] = (byte) (value & BYTE_MASK);
-        buf[offset+1] = (byte) ((value & BYTE_1_MASK) >> BYTE_1_SHIFT);
+        ByteUtils.toLittleEndian(buf, value, offset, 2);
     }
 
     /**
@@ -109,9 +110,7 @@ public final class ZipShort implements Cloneable, Serializable {
      * @return the corresponding java int value
      */
     public static int getValue(final byte[] bytes, final int offset) {
-        int value = (bytes[offset + 1] << BYTE_1_SHIFT) & BYTE_1_MASK;
-        value += (bytes[offset] & BYTE_MASK);
-        return value;
+        return (int) ByteUtils.fromLittleEndian(bytes, offset, 2);
     }
 
     /**
