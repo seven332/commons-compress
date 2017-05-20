@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     compile 'org.tukaani:xz:1.6'
-    compile 'com.github.seven332.okio:okio:1.11.0'
+    compile 'com.github.seven332.okio:okio:1.13.0'
     testCompile 'junit:junit:4.12'
     testCompile 'org.powermock:powermock-module-junit4:1.6.4'
     testCompile 'org.powermock:powermock-api-mockito:1.6.4'

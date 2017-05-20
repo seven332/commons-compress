@@ -21,19 +21,24 @@ package org.apache.commons.compress.utils;
  */
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import okio.Writable;
 
-public class ByteBufferWriter implements Writable {
+public class ByteBufferOutputStream extends OutputStream {
 
   private final ByteBuffer buffer;
 
-  public ByteBufferWriter(ByteBuffer buffer) {
+  public ByteBufferOutputStream(ByteBuffer buffer) {
     this.buffer = buffer;
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
+  public void write(int b) throws IOException {
+    buffer.put((byte) (b & 0xff));
+  }
+
+  @Override
+  public void write(byte b[], int off, int len) throws IOException {
     buffer.put(b, off, len);
   }
 }

@@ -27,12 +27,10 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import okio.Buffer;
-import okio.Readable;
 import okio.Store;
 import okio.Timeout;
-import okio.Writable;
 
-public class MemoryStore implements Store, Readable, Writable {
+public class MemoryStore implements Store {
 
   private static final int NAIVE_RESIZE_LIMIT = Integer.MAX_VALUE >> 1;
 
@@ -80,10 +78,10 @@ public class MemoryStore implements Store, Readable, Writable {
   }
 
   @Override
-  public int read(byte[] b, int off, int len) throws IOException {
+  public long read(Buffer sink, long byteCount) throws IOException {
     ensureOpen();
     repositionIfNecessary();
-    int wanted = len;
+    int wanted = (int) byteCount;
     int possible = size - position;
     if (possible <= 0) {
       return -1;
@@ -91,14 +89,9 @@ public class MemoryStore implements Store, Readable, Writable {
     if (wanted > possible) {
       wanted = possible;
     }
-    System.arraycopy(data, position, b, off, wanted);
+    sink.write(data, position, wanted);
     position += wanted;
     return wanted;
-  }
-
-  @Override
-  public long read(Buffer sink, long byteCount) throws IOException {
-    return sink.readSomeFrom(this, byteCount);
   }
 
   public int read(ByteBuffer buf) throws IOException {
@@ -118,9 +111,9 @@ public class MemoryStore implements Store, Readable, Writable {
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
+  public void write(Buffer source, long byteCount) throws IOException {
     ensureOpen();
-    int wanted = len;
+    int wanted = (int) byteCount;
     int possibleWithoutResize = size - position;
     if (wanted > possibleWithoutResize) {
       int newSize = position + wanted;
@@ -131,17 +124,17 @@ public class MemoryStore implements Store, Readable, Writable {
         resize(newSize);
       }
     }
-    System.arraycopy(b, off, data, position, wanted);
-    position += wanted;
-    if (size < position) {
-      size = position;
-    }
-    if (wanted != len) throw new IOException();
-  }
 
-  @Override
-  public void write(Buffer source, long byteCount) throws IOException {
-    source.writeTo(this, byteCount);
+    for (int remain = wanted; remain != 0;) {
+      int read = source.read(data, position, remain);
+      remain -= read;
+      position += read;
+      if (size < position) {
+        size = position;
+      }
+    }
+
+    if (wanted != byteCount) throw new IOException();
   }
 
   public int write(ByteBuffer b) throws IOException {

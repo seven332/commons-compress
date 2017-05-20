@@ -219,7 +219,7 @@ public final class IOUtils {
         try {
             final int expectedLength = b.remaining();
             buffer.write(source, expectedLength);
-            buffer.writeTo(new ByteBufferWriter(b));
+            buffer.writeTo(new ByteBufferOutputStream(b));
         } finally {
             buffer.close();
         }
