@@ -50,7 +50,7 @@ public class X5455_ExtendedTimestampTest {
     private final static ZipShort X5455 = new ZipShort(0x5455);
 
     private final static ZipLong ZERO_TIME = new ZipLong(0);
-    private final static ZipLong MAX_TIME_SECONDS = new ZipLong(0xFFFFFFFFL);
+    private final static ZipLong MAX_TIME_SECONDS = new ZipLong(Integer.MAX_VALUE);
     private final static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd/HH:mm:ss Z");
 
     static {
@@ -105,6 +105,12 @@ public class X5455_ExtendedTimestampTest {
         uses the extended time stamp field itself and should be the
         same as "mod time".
         http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/90df6756406f
+
+        Starting with Java9 the parser for extended time stamps has
+        been fixed to use signed integers which was detected during
+        the triage of COMPRESS-416. Signed integers is the correct
+        format and Compress 1.15 has started to use signed integers as
+        well.
          */
 
         final File archive = getFile("COMPRESS-210_unix_time_zip_test.zip");
@@ -119,11 +125,37 @@ public class X5455_ExtendedTimestampTest {
             while (en.hasMoreElements()) {
 
                 final ZipArchiveEntry zae = en.nextElement();
+                if (zae.isDirectory()) {
+                    continue;
+                }
                 final String name = zae.getName();
+                final int x = name.lastIndexOf('/');
+                final String yearString = name.substring(x + 1);
+                int year;
+                try {
+                    year = Integer.parseInt(yearString);
+                } catch (final NumberFormatException nfe) {
+                    // setTime.sh, skip
+                    continue;
+                }
+
                 final X5455_ExtendedTimestamp xf = (X5455_ExtendedTimestamp) zae.getExtraField(X5455);
                 final Date rawZ = zae.getLastModifiedDate();
                 final Date m = xf.getModifyJavaTime();
-                final boolean zipTimeUsesExtendedTimestamp = rawZ.equals(m);
+
+                /*
+                  We must distinguish three cases:
+                  - Java has read the extended time field itself and agrees with us (Java9 or Java8 and years prior to
+                    2038)
+                  - Java has read the extended time field but found a year >= 2038 (Java8)
+                  - Java hasn't read the extended time field at all (Java7- or early Java8)
+                */
+
+                final boolean zipTimeUsesExtendedTimestampCorrectly = rawZ.equals(m);
+                final boolean zipTimeUsesExtendedTimestampButUnsigned = year > 2037 && rawZ.getSeconds() == 1;
+                final boolean zipTimeUsesExtendedTimestamp = zipTimeUsesExtendedTimestampCorrectly
+                    || zipTimeUsesExtendedTimestampButUnsigned;
+
                 final Date z = zipTimeUsesExtendedTimestamp ? rawZ : adjustFromGMTToExpectedOffset(rawZ);
                 final Date a = xf.getAccessJavaTime();
 
@@ -131,65 +163,29 @@ public class X5455_ExtendedTimestampTest {
                 final String modTime = DATE_FORMAT.format(m);
                 final String accTime = DATE_FORMAT.format(a);
 
-                if (!zae.isDirectory()) {
-                    final int x = name.lastIndexOf('/');
-                    final String yearString = name.substring(x + 1);
-                    int year;
-                    try {
-                        year = Integer.parseInt(yearString);
-                    } catch (final NumberFormatException nfe) {
-                        year = -1;
+                switch (year) {
+                case 2109:
+                    // All three timestamps have overflowed by 2109.
+                    if (!zipTimeUsesExtendedTimestamp) {
+                        assertEquals("1981-01-01/00:00:02 +0000", zipTime);
                     }
-                    if (year >= 0) {
-                        switch (year) {
-                            case 2107:
-                                if (!zipTimeUsesExtendedTimestamp) {
-                                    // Zip time is okay up to 2107.
-                                    assertEquals(year + "-01-01/00:00:02 +0000", zipTime);
-                                }
-                                // But the X5455 data has overflowed:
-                                assertEquals("1970-11-24/17:31:45 +0000", modTime);
-                                assertEquals("1970-11-24/17:31:47 +0000", accTime);
-                                break;
-                            case 2108:
-                                if (!zipTimeUsesExtendedTimestamp) {
-                                    // Zip time is still okay at Jan 1st midnight (UTC) in 2108
-                                    // because we created the zip file in pacific time zone, so it's
-                                    // actually still 2107 in the zip file!
-                                    assertEquals(year + "-01-01/00:00:02 +0000", zipTime);
-                                }
-                                // The X5455 data is still overflowed, of course:
-                                assertEquals("1971-11-24/17:31:45 +0000", modTime);
-                                assertEquals("1971-11-24/17:31:47 +0000", accTime);
-                                break;
-                            case 2109:
-                                // All three timestamps have overflowed by 2109.
-                                if (!zipTimeUsesExtendedTimestamp) {
-                                    assertEquals("1981-01-01/00:00:02 +0000", zipTime);
-                                }
-                                assertEquals("1972-11-24/17:31:45 +0000", modTime);
-                                assertEquals("1972-11-24/17:31:47 +0000", accTime);
-
-                                // Hmmm.... looks like one could examine both DOS time
-                                // and the Unix time together to hack a nice workaround to
-                                // get timestamps past 2106 in a reverse-compatible way.
-
-                                break;
-                            default:
-                                if (!zipTimeUsesExtendedTimestamp) {
-                                    // X5455 time is good from epoch (1970) to 2106.
-                                    // Zip time is good from 1980 to 2107.
-                                    if (year < 1980) {
-                                        assertEquals("1980-01-01/08:00:00 +0000", zipTime);
-                                    } else {
-                                        assertEquals(year + "-01-01/00:00:02 +0000", zipTime);
-                                    }
-                                }
-                                assertEquals(year + "-01-01/00:00:01 +0000", modTime);
-                                assertEquals(year + "-01-01/00:00:03 +0000", accTime);
-                                break;
+                    break;
+                default:
+                    if (!zipTimeUsesExtendedTimestamp) {
+                        // X5455 time is good from epoch (1970) to 2037.
+                        // Zip time is good from 1980 to 2107.
+                        if (year < 1980) {
+                            assertEquals("1980-01-01/08:00:00 +0000", zipTime);
+                        } else {
+                            assertEquals(year + "-01-01/00:00:02 +0000", zipTime);
                         }
                     }
+
+                    if (year < 2038) {
+                        assertEquals(year + "-01-01/00:00:01 +0000", modTime);
+                        assertEquals(year + "-01-01/00:00:03 +0000", accTime);
+                    }
+                    break;
                 }
             }
         } finally {
@@ -235,9 +231,10 @@ public class X5455_ExtendedTimestampTest {
         cal.set(Calendar.DATE, 1);
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
-        final Date timeMillis = cal.getTime();
-        final ZipLong time = new ZipLong(timeMillis.getTime() / 1000);
+        final long timeMillis = cal.getTimeInMillis();
+        final ZipLong time = new ZipLong(timeMillis / 1000);
 
         // set too big
         try {
@@ -251,14 +248,15 @@ public class X5455_ExtendedTimestampTest {
         // get/set modify time
         xf.setModifyTime(time);
         assertEquals(time, xf.getModifyTime());
-        assertEquals(timeMillis, xf.getModifyJavaTime());
-        xf.setModifyJavaTime(timeMillis);
+        Date xfModifyJavaTime = xf.getModifyJavaTime();
+        assertEquals(timeMillis, xfModifyJavaTime.getTime());
+        xf.setModifyJavaTime(new Date(timeMillis));
         assertEquals(time, xf.getModifyTime());
-        assertEquals(timeMillis, xf.getModifyJavaTime());
+        assertEquals(timeMillis, xf.getModifyJavaTime().getTime());
         // Make sure milliseconds get zeroed out:
-        xf.setModifyJavaTime(new Date(timeMillis.getTime() + 123));
+        xf.setModifyJavaTime(new Date(timeMillis + 123));
         assertEquals(time, xf.getModifyTime());
-        assertEquals(timeMillis, xf.getModifyJavaTime());
+        assertEquals(timeMillis, xf.getModifyJavaTime().getTime());
         // Null
         xf.setModifyTime(null);
         assertNull(xf.getModifyJavaTime());
@@ -268,14 +266,14 @@ public class X5455_ExtendedTimestampTest {
         // get/set access time
         xf.setAccessTime(time);
         assertEquals(time, xf.getAccessTime());
-        assertEquals(timeMillis, xf.getAccessJavaTime());
-        xf.setAccessJavaTime(timeMillis);
+        assertEquals(timeMillis, xf.getAccessJavaTime().getTime());
+        xf.setAccessJavaTime(new Date(timeMillis));
         assertEquals(time, xf.getAccessTime());
-        assertEquals(timeMillis, xf.getAccessJavaTime());
+        assertEquals(timeMillis, xf.getAccessJavaTime().getTime());
         // Make sure milliseconds get zeroed out:
-        xf.setAccessJavaTime(new Date(timeMillis.getTime() + 123));
+        xf.setAccessJavaTime(new Date(timeMillis + 123));
         assertEquals(time, xf.getAccessTime());
-        assertEquals(timeMillis, xf.getAccessJavaTime());
+        assertEquals(timeMillis, xf.getAccessJavaTime().getTime());
         // Null
         xf.setAccessTime(null);
         assertNull(xf.getAccessJavaTime());
@@ -285,14 +283,14 @@ public class X5455_ExtendedTimestampTest {
         // get/set create time
         xf.setCreateTime(time);
         assertEquals(time, xf.getCreateTime());
-        assertEquals(timeMillis, xf.getCreateJavaTime());
-        xf.setCreateJavaTime(timeMillis);
+        assertEquals(timeMillis, xf.getCreateJavaTime().getTime());
+        xf.setCreateJavaTime(new Date(timeMillis));
         assertEquals(time, xf.getCreateTime());
-        assertEquals(timeMillis, xf.getCreateJavaTime());
+        assertEquals(timeMillis, xf.getCreateJavaTime().getTime());
         // Make sure milliseconds get zeroed out:
-        xf.setCreateJavaTime(new Date(timeMillis.getTime() + 123));
+        xf.setCreateJavaTime(new Date(timeMillis + 123));
         assertEquals(time, xf.getCreateTime());
-        assertEquals(timeMillis, xf.getCreateJavaTime());
+        assertEquals(timeMillis, xf.getCreateJavaTime().getTime());
         // Null
         xf.setCreateTime(null);
         assertNull(xf.getCreateJavaTime());
@@ -388,15 +386,15 @@ public class X5455_ExtendedTimestampTest {
         final byte[] CR_CENTRAL = {4}; // central data only dontains the CR flag and no actual data
 
         final byte[] MOD_ZERO = {1, 0, 0, 0, 0};
-        final byte[] MOD_MAX = {1, -1, -1, -1, -1};
+        final byte[] MOD_MAX = {1, -1, -1, -1, 0x7f};
         final byte[] AC_ZERO = {2, 0, 0, 0, 0};
-        final byte[] AC_MAX = {2, -1, -1, -1, -1};
+        final byte[] AC_MAX = {2, -1, -1, -1, 0x7f};
         final byte[] CR_ZERO = {4, 0, 0, 0, 0};
-        final byte[] CR_MAX = {4, -1, -1, -1, -1};
+        final byte[] CR_MAX = {4, -1, -1, -1, 0x7f};
         final byte[] MOD_AC_ZERO = {3, 0, 0, 0, 0, 0, 0, 0, 0};
-        final byte[] MOD_AC_MAX = {3, -1, -1, -1, -1, -1, -1, -1, -1};
+        final byte[] MOD_AC_MAX = {3, -1, -1, -1, 0x7f, -1, -1, -1, 0x7f};
         final byte[] MOD_AC_CR_ZERO = {7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        final byte[] MOD_AC_CR_MAX = {7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+        final byte[] MOD_AC_CR_MAX = {7, -1, -1, -1, 0x7f, -1, -1, -1, 0x7f, -1, -1, -1, 0x7f};
 
         parseReparse(null, NULL_FLAGS, NULL_FLAGS);
         parseReparse(ZERO_TIME, MOD_ZERO, MOD_ZERO);
@@ -441,7 +439,7 @@ public class X5455_ExtendedTimestampTest {
             }
         }
         out.close();
-        
+
         final ZipFile zf = new ZipFile(output);
         final ZipArchiveEntry ze = zf.getEntry("foo");
         final X5455_ExtendedTimestamp ext =

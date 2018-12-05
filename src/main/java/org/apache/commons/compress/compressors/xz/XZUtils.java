@@ -41,7 +41,7 @@ public class XZUtils {
         (byte) 0xFD, '7', 'z', 'X', 'Z', '\0'
     };
 
-    static enum CachedAvailability {
+    enum CachedAvailability {
         DONT_CACHE, CACHED_AVAILABLE, CACHED_UNAVAILABLE
     }
 
@@ -168,7 +168,7 @@ public class XZUtils {
             cachedXZAvailability = CachedAvailability.DONT_CACHE;
         } else if (cachedXZAvailability == CachedAvailability.DONT_CACHE) {
             final boolean hasXz = internalIsXZCompressionAvailable();
-            cachedXZAvailability = hasXz ? CachedAvailability.CACHED_AVAILABLE
+            cachedXZAvailability = hasXz ? CachedAvailability.CACHED_AVAILABLE // NOSONAR
                 : CachedAvailability.CACHED_UNAVAILABLE;
         }
     }

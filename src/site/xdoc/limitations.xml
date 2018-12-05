@@ -25,10 +25,25 @@
      Commons Compress&#x2122; grouped by the archiving/compression
      format they apply to.</p>
 
+     <section name="General">
+       <ul>
+         <li>Several implementations of decompressors and unarchivers will
+         invoke <a
+         href="https://docs.oracle.com/javase/10/docs/api/java/io/InputStream.html#skip(long)"><code>skip</code></a>
+         on the underlying <code>InputStream</code> which may throw an
+         <code>IOException</code> in some stream implementations. One
+         known case where this happens is when using
+         <code>System.in</code> as input. If you encounter an
+         exception with a message like "Illegal seek" we recommend you
+         wrap your stream in a <code>SkipShieldingInputStream</code>
+         from our utils package before passing it to Compress.</li>
+       </ul>
+     </section>
+
      <section name="7Z">
        <ul>
          <li>the format requires the otherwise optional <a
-         href="http://tukaani.org/xz/java.html">XZ for Java</a>
+         href="https://tukaani.org/xz/java.html">XZ for Java</a>
          library.</li>
          <li>only <code>File</code>s are supported as input/output,
          not streams. Starting with Compress 1.13
@@ -48,7 +63,7 @@
          <li>Support for some BCJ filters and the DELTA filter has
          been added with Compress 1.8.  Because of a known bug in
          version 1.4 of the <a
-         href="http://tukaani.org/xz/java.html">XZ for Java</a>
+         href="https://tukaani.org/xz/java.html">XZ for Java</a>
          library, archives using BCJ filters will cause an
          <code>AssertionError</code> when read.  If you need support
          for BCJ filters you must use XZ for Java 1.5 or later.</li>
@@ -95,6 +110,13 @@
          streams using DEFLATE compression.</li>
        </ul>
      </section>
+     <section name="DEFLATE64">
+       <ul>
+         <li><code>CompressorStreamFactory</code> is not able to auto-detect
+         streams using DEFLATE64 compression.</li>
+         <li>read-only support</li>
+       </ul>
+     </section>
      <section name="DUMP">
        <ul>
          <li>read-only support</li>
@@ -127,7 +149,7 @@
      <section name="LZMA">
        <ul>
          <li>the format requires the otherwise optional <a
-         href="http://tukaani.org/xz/java.html">XZ for Java</a>
+         href="https://tukaani.org/xz/java.html">XZ for Java</a>
          library.</li>
          <li>Commons Compress 1.12 and earlier only support reading
          the format</li>
@@ -149,13 +171,13 @@
          supported</li>
          <li>In Compress 1.6 <code>TarArchiveInputStream</code> could
          fail to read the full contents of an entry unless the stream
-         was wrapped in a bufferng stream.</li>
+         was wrapped in a buffering stream.</li>
        </ul>
      </section>
      <section name="XZ">
        <ul>
          <li>the format requires the otherwise optional <a
-         href="http://tukaani.org/xz/java.html">XZ for Java</a>
+         href="https://tukaani.org/xz/java.html">XZ for Java</a>
          library.</li>
        </ul>
      </section>
@@ -178,7 +200,7 @@
          limitation of Compress' specific implementation.</li>
          <li>only a subset of compression methods are supported,
          including the most common STORED and DEFLATEd.  IMPLODE,
-         SHRINK and BZIP2 support is read-only.</li>
+         SHRINK, DEFLATE64 and BZIP2 support is read-only.</li>
          <li>no support for encryption or multi-volume archives</li>
          <li>In versions prior to Compress 1.6
          <code>ZipArchiveEntries</code> read from an archive will
@@ -192,6 +214,21 @@
          <code>ZipEntry#getTime</code> under the covers which may
          return different times for the same archive when using
          different versions of Java.</li>
+         <li>In versions of Compress prior to 1.16 a specially crafted
+         ZIP archive can be used to cause an infinite loop inside of
+         Compress' extra field parser used by the <code>ZipFile</code>
+         and <code>ZipArchiveInputStream</code> classes.  This can be
+         used to mount a denial of service attack against services
+         that use Compress' zip package. See the <a
+         href="security.html">Security Reports</a> page for
+         details.</li>
+       </ul>
+     </section>
+     <section name="Zstandard">
+       <ul>
+         <li>the format requires the otherwise optional <a
+         href="https://github.com/luben/zstd-jni">Zstandard JNI</a>
+         library.</li>
        </ul>
      </section>
    </body>

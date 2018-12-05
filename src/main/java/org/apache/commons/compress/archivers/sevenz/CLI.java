@@ -23,9 +23,8 @@ import java.io.IOException;
 
 public class CLI {
 
-    private static final byte[] BUF = new byte[8192];
 
-    private static enum Mode {
+    private enum Mode {
         LIST("Analysing") {
             @Override
             public void takeAction(final SevenZFile archive, final SevenZArchiveEntry entry) {
@@ -65,8 +64,9 @@ public class CLI {
             }
         },
         EXTRACT("Extracting") {
+            private final byte[] buf = new byte[8192];
             @Override
-            public void takeAction(final SevenZFile archive, final SevenZArchiveEntry entry) 
+            public void takeAction(final SevenZFile archive, final SevenZArchiveEntry entry)
                 throws IOException {
                 final File outFile = new File(entry.getName());
                 if (entry.isDirectory()) {
@@ -86,8 +86,8 @@ public class CLI {
                     final long total = entry.getSize();
                     long off = 0;
                     while (off < total) {
-                        final int toRead = (int) Math.min(total - off, BUF.length);
-                        final int bytesRead = archive.read(BUF, 0, toRead);
+                        final int toRead = (int) Math.min(total - off, buf.length);
+                        final int bytesRead = archive.read(buf, 0, toRead);
                         if (bytesRead < 1) {
                             throw new IOException("reached end of entry "
                                                   + entry.getName()
@@ -96,14 +96,14 @@ public class CLI {
                                                   + total);
                         }
                         off += bytesRead;
-                        fos.write(BUF, 0, bytesRead);
+                        fos.write(buf, 0, bytesRead);
                     }
                 }
             }
         };
 
         private final String message;
-        private Mode(final String message) {
+        Mode(final String message) {
             this.message = message;
         }
         public String getMessage() {
@@ -111,7 +111,7 @@ public class CLI {
         }
         public abstract void takeAction(SevenZFile archive, SevenZArchiveEntry entry)
             throws IOException;
-    }        
+    }
 
     public static void main(final String[] args) throws Exception {
         if (args.length == 0) {

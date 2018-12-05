@@ -25,14 +25,14 @@ import java.util.zip.ZipException;
 /**
  * <p>An extra field that stores additional file and directory timestamp data
  * for zip entries.   Each zip entry can include up to three timestamps
- * (modify, access, create*).  The timestamps are stored as 32 bit unsigned
+ * (modify, access, create*).  The timestamps are stored as 32 bit signed
  * integers representing seconds since UNIX epoch (Jan 1st, 1970, UTC).
  * This field improves on zip's default timestamp granularity, since it
  * allows one to store additional timestamps, and, in addition, the timestamps
  * are stored using per-second granularity (zip's default behaviour can only store
  * timestamps to the nearest <em>even</em> second).
  * </p><p>
- * Unfortunately, 32 (unsigned) bits can only store dates up to the year 2106,
+ * Unfortunately, 32 (signed) bits can only store dates up to the year 2037,
  * and so this extra field will eventually be obsolete.  Enjoy it while it lasts!
  * </p>
  * <ul>
@@ -187,7 +187,7 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
         if (bit2_createTimePresent && createTime != null) {
             data[0] |= CREATE_TIME_BIT;
             System.arraycopy(createTime.getBytes(), 0, data, pos, 4);
-            pos += 4;
+            pos += 4; // NOSONAR - assignment as documentation
         }
         return data;
     }
@@ -237,7 +237,7 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
         }
         if (bit2_createTimePresent && offset + 4 <= len) {
             createTime = new ZipLong(data, offset);
-            offset += 4;
+            offset += 4; // NOSONAR - assignment as documentation
         }
     }
 
@@ -370,7 +370,7 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
      * @return modify time as java.util.Date or null.
      */
     public Date getModifyJavaTime() {
-        return modifyTime != null ? new Date(modifyTime.getValue() * 1000) : null;
+        return zipLongToDate(modifyTime);
     }
 
     /**
@@ -382,7 +382,7 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
      * @return access time as java.util.Date or null.
      */
     public Date getAccessJavaTime() {
-        return accessTime != null ? new Date(accessTime.getValue() * 1000) : null;
+        return zipLongToDate(accessTime);
     }
 
     /**
@@ -400,7 +400,7 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
      * @return create time as java.util.Date or null.
      */
     public Date getCreateJavaTime() {
-        return createTime != null ? new Date(createTime.getValue() * 1000) : null;
+        return zipLongToDate(createTime);
     }
 
     /**
@@ -518,12 +518,7 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
     private static ZipLong dateToZipLong(final Date d) {
         if (d == null) { return null; }
 
-        final long TWO_TO_32 = 0x100000000L;
-        final long l = d.getTime() / 1000;
-        if (l >= TWO_TO_32) {
-            throw new IllegalArgumentException("Cannot set an X5455 timestamp larger than 2^32: " + l);
-        }
-        return new ZipLong(l);
+        return unixTimeToZipLong(d.getTime() / 1000);
     }
 
     /**
@@ -588,6 +583,17 @@ public class X5455_ExtendedTimestamp implements ZipExtraField, Cloneable, Serial
             hc ^= Integer.rotateLeft(createTime.hashCode(), 22);
         }
         return hc;
+    }
+
+    private static Date zipLongToDate(ZipLong unixTime) {
+        return unixTime != null ? new Date(unixTime.getIntValue() * 1000L) : null;
+    }
+
+    private static ZipLong unixTimeToZipLong(long l) {
+        if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("X5455 timestamps must fit in a signed 32 bit integer: " + l);
+        }
+        return new ZipLong(l);
     }
 
 }

@@ -23,17 +23,17 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 
 /**
- * List of known compression methods 
- * 
+ * List of known compression methods
+ *
  * Many of these methods are currently not supported by commons compress
- * 
+ *
  * @since 1.5
  */
 public enum ZipMethod {
 
     /**
      * Compression method 0 for uncompressed entries.
-     * 
+     *
      * @see ZipEntry#STORED
      */
     STORED(ZipEntry.STORED),
@@ -41,123 +41,130 @@ public enum ZipMethod {
     /**
      * UnShrinking.
      * dynamic Lempel-Ziv-Welch-Algorithm
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     UNSHRINKING(1),
 
     /**
      * Reduced with compression factor 1.
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     EXPANDING_LEVEL_1(2),
 
     /**
      * Reduced with compression factor 2.
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     EXPANDING_LEVEL_2(3),
 
     /**
      * Reduced with compression factor 3.
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     EXPANDING_LEVEL_3(4),
 
     /**
      * Reduced with compression factor 4.
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     EXPANDING_LEVEL_4(5),
 
     /**
      * Imploding.
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     IMPLODING(6),
 
     /**
      * Tokenization.
-     * 
-     * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
+     *
+     * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">Explanation of fields: compression
      *      method: (2 bytes)</a>
      */
     TOKENIZATION(7),
 
     /**
      * Compression method 8 for compressed (deflated) entries.
-     * 
+     *
      * @see ZipEntry#DEFLATED
      */
     DEFLATED(ZipEntry.DEFLATED),
 
     /**
      * Compression Method 9 for enhanced deflate.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     ENHANCED_DEFLATED(9),
 
     /**
      * PKWARE Data Compression Library Imploding.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     PKWARE_IMPLODING(10),
 
     /**
      * Compression Method 12 for bzip2.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     BZIP2(12),
 
     /**
      * Compression Method 14 for LZMA.
-     * 
-     * @see <a href="http://www.7-zip.org/sdk.html">http://www.7-zip.org/sdk.html</a>
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.7-zip.org/sdk.html">https://www.7-zip.org/sdk.html</a>
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     LZMA(14),
 
 
     /**
+     * Compression Method 95 for XZ.
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
+     */
+    XZ(95),
+
+    /**
      * Compression Method 96 for Jpeg compression.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     JPEG(96),
 
     /**
      * Compression Method 97 for WavPack.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     WAVPACK(97),
 
     /**
      * Compression Method 98 for PPMd.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     PPMD(98),
 
 
     /**
      * Compression Method 99 for AES encryption.
-     * 
-     * @see <a href="http://www.winzip.com/wz54.htm">http://www.winzip.com/wz54.htm</a>
+     *
+     * @see <a href="https://www.winzip.com/wz54.htm">https://www.winzip.com/wz54.htm</a>
      */
     AES_ENCRYPTED(99),
 
@@ -193,9 +200,9 @@ public enum ZipMethod {
 
     /**
      * the code of the compression method.
-     * 
+     *
      * @see ZipArchiveEntry#getMethod()
-     * 
+     *
      * @return an integer code for the method
      */
     public int getCode() {

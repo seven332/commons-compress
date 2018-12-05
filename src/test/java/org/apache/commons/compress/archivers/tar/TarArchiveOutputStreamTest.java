@@ -18,7 +18,12 @@
 
 package org.apache.commons.compress.archivers.tar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,13 +31,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.security.MessageDigest;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
-
 import org.apache.commons.compress.AbstractTestCase;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
@@ -100,10 +107,10 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.write(new byte[10 * 1024]);
         final byte[] data = bos.toByteArray();
         assertEquals(0x80,
-                     data[TarConstants.NAMELEN
-                        + TarConstants.MODELEN
-                        + TarConstants.UIDLEN
-                        + TarConstants.GIDLEN] & 0x80);
+            data[TarConstants.NAMELEN
+                + TarConstants.MODELEN
+                + TarConstants.UIDLEN
+                + TarConstants.GIDLEN] & 0x80);
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -126,12 +133,12 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.write(new byte[10 * 1024]);
         final byte[] data = bos.toByteArray();
         assertEquals("00000000000 ",
-                     new String(data,
-                                1024 + TarConstants.NAMELEN
-                                + TarConstants.MODELEN
-                                + TarConstants.UIDLEN
-                                + TarConstants.GIDLEN, 12,
-                                CharsetNames.UTF_8));
+            new String(data,
+                1024 + TarConstants.NAMELEN
+                    + TarConstants.MODELEN
+                    + TarConstants.UIDLEN
+                    + TarConstants.GIDLEN, 12,
+                CharsetNames.UTF_8));
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -148,11 +155,11 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         m.put("a", "b");
         final byte[] data = writePaxHeader(m);
         assertEquals("00000000006 ",
-                     new String(data, TarConstants.NAMELEN
-                                + TarConstants.MODELEN
-                                + TarConstants.UIDLEN
-                                + TarConstants.GIDLEN, 12,
-                                CharsetNames.UTF_8));
+            new String(data, TarConstants.NAMELEN
+                + TarConstants.MODELEN
+                + TarConstants.UIDLEN
+                + TarConstants.GIDLEN, 12,
+                CharsetNames.UTF_8));
         assertEquals("6 a=b\n", new String(data, 512, 6, CharsetNames.UTF_8));
     }
 
@@ -160,38 +167,38 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
     public void testPaxHeadersWithLength99() throws Exception {
         final Map<String, String> m = new HashMap<>();
         m.put("a",
-              "0123456789012345678901234567890123456789"
-              + "01234567890123456789012345678901234567890123456789"
-              + "012");
+            "0123456789012345678901234567890123456789"
+                + "01234567890123456789012345678901234567890123456789"
+                + "012");
         final byte[] data = writePaxHeader(m);
         assertEquals("00000000143 ",
-                     new String(data, TarConstants.NAMELEN
-                                + TarConstants.MODELEN
-                                + TarConstants.UIDLEN
-                                + TarConstants.GIDLEN, 12,
-                                CharsetNames.UTF_8));
+            new String(data, TarConstants.NAMELEN
+                + TarConstants.MODELEN
+                + TarConstants.UIDLEN
+                + TarConstants.GIDLEN, 12,
+                CharsetNames.UTF_8));
         assertEquals("99 a=0123456789012345678901234567890123456789"
-              + "01234567890123456789012345678901234567890123456789"
-              + "012\n", new String(data, 512, 99, CharsetNames.UTF_8));
+            + "01234567890123456789012345678901234567890123456789"
+            + "012\n", new String(data, 512, 99, CharsetNames.UTF_8));
     }
 
     @Test
     public void testPaxHeadersWithLength101() throws Exception {
         final Map<String, String> m = new HashMap<>();
         m.put("a",
-              "0123456789012345678901234567890123456789"
-              + "01234567890123456789012345678901234567890123456789"
-              + "0123");
+            "0123456789012345678901234567890123456789"
+                + "01234567890123456789012345678901234567890123456789"
+                + "0123");
         final byte[] data = writePaxHeader(m);
         assertEquals("00000000145 ",
-                     new String(data, TarConstants.NAMELEN
-                                + TarConstants.MODELEN
-                                + TarConstants.UIDLEN
-                                + TarConstants.GIDLEN, 12,
-                                CharsetNames.UTF_8));
+            new String(data, TarConstants.NAMELEN
+                + TarConstants.MODELEN
+                + TarConstants.UIDLEN
+                + TarConstants.GIDLEN, 12,
+                CharsetNames.UTF_8));
         assertEquals("101 a=0123456789012345678901234567890123456789"
-              + "01234567890123456789012345678901234567890123456789"
-              + "0123\n", new String(data, 512, 101, CharsetNames.UTF_8));
+            + "01234567890123456789012345678901234567890123456789"
+            + "0123\n", new String(data, 512, 101, CharsetNames.UTF_8));
     }
 
     private byte[] writePaxHeader(final Map<String, String> m) throws Exception {
@@ -226,7 +233,7 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.closeArchiveEntry();
         final byte[] data = bos.toByteArray();
         assertEquals("160 path=" + n + "\n",
-                     new String(data, 512, 160, CharsetNames.UTF_8));
+            new String(data, 512, 160, CharsetNames.UTF_8));
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -248,11 +255,11 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.write(new byte[10 * 1024]);
         final byte[] data = bos.toByteArray();
         assertEquals((byte) 0xff,
-                     data[TarConstants.NAMELEN
-                          + TarConstants.MODELEN
-                          + TarConstants.UIDLEN
-                          + TarConstants.GIDLEN
-                          + TarConstants.SIZELEN]);
+            data[TarConstants.NAMELEN
+                + TarConstants.MODELEN
+                + TarConstants.UIDLEN
+                + TarConstants.GIDLEN
+                + TarConstants.SIZELEN]);
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -279,13 +286,13 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.write(new byte[10 * 1024]);
         final byte[] data = bos.toByteArray();
         assertEquals("00000000000 ",
-                     new String(data,
-                                1024 + TarConstants.NAMELEN
-                                + TarConstants.MODELEN
-                                + TarConstants.UIDLEN
-                                + TarConstants.GIDLEN
-                                + TarConstants.SIZELEN, 12,
-                                CharsetNames.UTF_8));
+            new String(data,
+                1024 + TarConstants.NAMELEN
+                    + TarConstants.MODELEN
+                    + TarConstants.UIDLEN
+                    + TarConstants.GIDLEN
+                    + TarConstants.SIZELEN, 12,
+                CharsetNames.UTF_8));
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -328,7 +335,7 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.close();
         final byte[] data = bos.toByteArray();
         assertEquals("11 path=" + n + "\n",
-                     new String(data, 512, 11, CharsetNames.UTF_8));
+            new String(data, 512, 11, CharsetNames.UTF_8));
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -351,7 +358,7 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tos.close();
         final byte[] data = bos.toByteArray();
         assertEquals("15 linkpath=" + n + "\n",
-                     new String(data, 512, 15, CharsetNames.UTF_8));
+            new String(data, 512, 15, CharsetNames.UTF_8));
         final TarArchiveInputStream tin =
             new TarArchiveInputStream(new ByteArrayInputStream(data));
         final TarArchiveEntry e = tin.getNextTarEntry();
@@ -399,8 +406,8 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
     @Test
     public void testWriteLongDirectoryNameErrorMode() throws Exception {
         final String n = "01234567890123456789012345678901234567890123456789"
-                + "01234567890123456789012345678901234567890123456789"
-                + "01234567890123456789012345678901234567890123456789/";
+            + "01234567890123456789012345678901234567890123456789"
+            + "01234567890123456789012345678901234567890123456789/";
 
         try {
             final TarArchiveEntry t = new TarArchiveEntry(n);
@@ -524,8 +531,8 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
     @Test
     public void testWriteLongLinkNameErrorMode() throws Exception {
         final String linkname = "01234567890123456789012345678901234567890123456789"
-                + "01234567890123456789012345678901234567890123456789"
-                + "01234567890123456789012345678901234567890123456789/test";
+            + "01234567890123456789012345678901234567890123456789"
+            + "01234567890123456789012345678901234567890123456789/test";
         final TarArchiveEntry entry = new TarArchiveEntry("test", TarConstants.LF_SYMLINK);
         entry.setLinkName(linkname);
 
@@ -548,7 +555,7 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         final String linkname = "01234567890123456789012345678901234567890123456789"
             + "01234567890123456789012345678901234567890123456789"
             + "01234567890123456789012345678901234567890123456789/";
-        final TarArchiveEntry entry = new TarArchiveEntry("test" , TarConstants.LF_SYMLINK);
+        final TarArchiveEntry entry = new TarArchiveEntry("test", TarConstants.LF_SYMLINK);
         entry.setLinkName(linkname);
 
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -607,31 +614,136 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         tin.close();
     }
 
+    @SuppressWarnings("deprecation")
+    @Test public void testRecordSize() throws IOException {
+        try {
+            TarArchiveOutputStream tos =
+                new TarArchiveOutputStream(new ByteArrayOutputStream(),512,511);
+            fail("should have rejected recordSize of 511");
+        } catch(IllegalArgumentException e) {
+            // expected;
+        }
+        try {
+            TarArchiveOutputStream tos =
+                new TarArchiveOutputStream(new ByteArrayOutputStream(),512,511,null);
+            fail("should have rejected recordSize of 511");
+        } catch(IllegalArgumentException e) {
+            // expected;
+        }
+        try (TarArchiveOutputStream tos = new TarArchiveOutputStream(new ByteArrayOutputStream(),
+            512, 512)) {
+            assertEquals("recordSize",512,tos.getRecordSize());
+        }
+        try (TarArchiveOutputStream tos = new TarArchiveOutputStream(new ByteArrayOutputStream(),
+            512, 512, null)) {
+            assertEquals("recordSize",512,tos.getRecordSize());
+        }
+    }
     @Test
-    public void testPadsOutputToFullBlockLength() throws Exception {
+    public void testBlockSizes() throws Exception {
+        String fileName = "/test1.xml";
+        byte[] contents = getResourceContents(fileName);
+        testPadding(TarConstants.DEFAULT_BLKSIZE, fileName, contents); // USTAR / pre-pax
+        testPadding(5120, fileName, contents); // PAX default
+        testPadding(1<<15, fileName, contents); //PAX max
+        testPadding(-2, fileName, contents);    // don't specify a block size -> use minimum length
+        try {
+            testPadding(511, fileName, contents);    // don't specify a block size -> use minimum length
+            fail("should have thrown an illegal argument exception");
+        } catch (IllegalArgumentException e) {
+            //expected
+        }
+        try {
+            testPadding(0, fileName, contents);    // don't specify a block size -> use minimum length
+            fail("should have thrown an illegal argument exception");
+        } catch (IllegalArgumentException e) {
+            //expected
+        }
+        // test with "content" that is an exact multiple of record length
+        contents = new byte[2048];
+        java.util.Arrays.fill(contents, (byte) 42);
+        testPadding(TarConstants.DEFAULT_BLKSIZE, fileName, contents);
+    }
+
+    private void testPadding(int blockSize, String fileName, byte[] contents) throws IOException {
         final File f = File.createTempFile("commons-compress-padding", ".tar");
         f.deleteOnExit();
         final FileOutputStream fos = new FileOutputStream(f);
-        final TarArchiveOutputStream tos = new TarArchiveOutputStream(fos);
-        final File file1 = getFile("test1.xml");
-        final TarArchiveEntry sEntry = new TarArchiveEntry(file1, file1.getName());
+        final TarArchiveOutputStream tos;
+        if (blockSize != -2) {
+            tos = new TarArchiveOutputStream(fos, blockSize);
+        } else {
+            blockSize = 512;
+            tos = new TarArchiveOutputStream(fos);
+        }
+        TarArchiveEntry sEntry;
+        sEntry = new TarArchiveEntry(fileName);
+        sEntry.setSize(contents.length);
         tos.putArchiveEntry(sEntry);
-        final FileInputStream in = new FileInputStream(file1);
-        IOUtils.copy(in, tos);
-        in.close();
+        tos.write(contents);
         tos.closeArchiveEntry();
         tos.close();
-        // test1.xml is small enough to fit into the default block size
-        assertEquals(TarConstants.DEFAULT_BLKSIZE, f.length());
+        int fileRecordsSize = (int) Math.ceil((double) contents.length / 512) * 512;
+        final int headerSize = 512;
+        final int endOfArchiveSize = 1024;
+        int unpaddedSize = headerSize + fileRecordsSize + endOfArchiveSize;
+        int paddedSize = (int) Math.ceil((double)unpaddedSize/blockSize)*blockSize;
+        assertEquals(paddedSize, f.length());
+    }
+
+    private byte[] getResourceContents(String name) throws IOException {
+        ByteArrayOutputStream bos;
+        try (InputStream resourceAsStream = getClass().getResourceAsStream(name)) {
+            bos = new ByteArrayOutputStream();
+            IOUtils.copy(resourceAsStream, bos);
+        }
+        return bos.toByteArray();
+    }
+    @Test public void testPutGlobalPaxHeaderEntry() throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        TarArchiveOutputStream tos = new TarArchiveOutputStream(bos);
+        int pid = 73;
+        int globCount = 1;
+        byte lfPaxGlobalExtendedHeader = TarConstants.LF_PAX_GLOBAL_EXTENDED_HEADER;
+        TarArchiveEntry globalHeader = new TarArchiveEntry("/tmp/GlobalHead." + pid + "." + globCount,
+            lfPaxGlobalExtendedHeader);
+        globalHeader.addPaxHeader("SCHILLY.xattr.user.org.apache.weasels","global-weasels");
+        tos.putArchiveEntry(globalHeader);
+        TarArchiveEntry entry = new TarArchiveEntry("message");
+        String x = "If at first you don't succeed, give up";
+        entry.setSize(x.length());
+        tos.putArchiveEntry(entry);
+        tos.write(x.getBytes());
+        tos.closeArchiveEntry();
+        entry = new TarArchiveEntry("counter-message");
+        String y = "Nothing succeeds like excess";
+        entry.setSize(y.length());
+        entry.addPaxHeader("SCHILLY.xattr.user.org.apache.weasels.species","unknown");
+        tos.putArchiveEntry(entry);
+        tos.write(y.getBytes());
+        tos.closeArchiveEntry();
+        tos.close();
+        TarArchiveInputStream in = new TarArchiveInputStream(new ByteArrayInputStream(bos.toByteArray()));
+        TarArchiveEntry entryIn = in.getNextTarEntry();
+        assertNotNull(entryIn);
+        assertEquals("message",entryIn.getName());
+        assertEquals("global-weasels",entryIn.getExtraPaxHeader("SCHILLY.xattr.user.org.apache.weasels"));
+        Reader reader = new InputStreamReader(in);
+        for(int i=0;i<x.length();i++) {
+            assertEquals(x.charAt(i),reader.read());
+        }
+        assertEquals(-1,reader.read());
+        entryIn = in.getNextTarEntry();
+        assertEquals("counter-message",entryIn.getName());
+        assertEquals("global-weasels",entryIn.getExtraPaxHeader("SCHILLY.xattr.user.org.apache.weasels"));
+        assertEquals("unknown",entryIn.getExtraPaxHeader("SCHILLY.xattr.user.org.apache.weasels.species"));
+        assertNull(in.getNextTarEntry());
     }
 
     /**
-     * When using long file names the longLinkEntry included the
-     * current timestamp as the Entry modification date. This was
-     * never exposed to the client but it caused identical archives to
+     * When using long file names the longLinkEntry included the current timestamp as the Entry
+     * modification date. This was never exposed to the client but it caused identical archives to
      * have different MD5 hashes.
-     *
-     * @throws Exception
      */
     @Test
     public void testLongNameMd5Hash() throws Exception {
@@ -655,15 +767,18 @@ public class TarArchiveOutputStreamTest extends AbstractTestCase {
         // do I still have the correct modification date?
         // let a second elapse so we don't get the current time
         Thread.sleep(1000);
-        final TarArchiveInputStream tarIn = new TarArchiveInputStream(new ByteArrayInputStream(archive2));
+        final TarArchiveInputStream tarIn = new TarArchiveInputStream(
+            new ByteArrayInputStream(archive2));
         final ArchiveEntry nextEntry = tarIn.getNextEntry();
         assertEquals(longFileName, nextEntry.getName());
         // tar archive stores modification time to second granularity only (floored)
-        assertEquals(modificationDate.getTime() / 1000, nextEntry.getLastModifiedDate().getTime() / 1000);
+        assertEquals(modificationDate.getTime() / 1000,
+            nextEntry.getLastModifiedDate().getTime() / 1000);
         tarIn.close();
     }
 
-    private static byte[] createTarArchiveContainingOneDirectory(final String fname, final Date modificationDate) throws IOException {
+    private static byte[] createTarArchiveContainingOneDirectory(final String fname,
+        final Date modificationDate) throws IOException {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final TarArchiveOutputStream tarOut = new TarArchiveOutputStream(baos, 1024);
         tarOut.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);

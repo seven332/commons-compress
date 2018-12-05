@@ -38,7 +38,7 @@ public final class IOUtils {
 
     private static final int COPY_BUF_SIZE = 8024;
     private static final int SKIP_BUF_SIZE = 4096;
-    
+
     // This buffer does not need to be synchronised because it is write only; the contents are ignored
     // Does not affect Immutability
     private static final byte[] SKIP_BUF = new byte[SKIP_BUF_SIZE];
@@ -71,12 +71,17 @@ public final class IOUtils {
      * @param output
      *            the target Stream
      * @param buffersize
-     *            the buffer size to use
+     *            the buffer size to use, must be bigger than 0
      * @return the number of bytes copied
      * @throws IOException
      *             if an error occurs
+     * @throws IllegalArgumentException
+     *             if buffersize is smaller than or equal to 0
      */
     public static long copy(final InputStream input, final OutputStream output, final int buffersize) throws IOException {
+        if (buffersize < 1) {
+            throw new IllegalArgumentException("buffersize must be bigger than 0");
+        }
         final byte[] buffer = new byte[buffersize];
         int n = 0;
         long count=0;
@@ -86,7 +91,7 @@ public final class IOUtils {
         }
         return count;
     }
-    
+
     /**
      * Skips the given number of bytes by repeatedly invoking skip on
      * the given input stream if necessary.
@@ -112,7 +117,7 @@ public final class IOUtils {
             }
             numToSkip -= skipped;
         }
-            
+
         while (numToSkip > 0) {
             final int read = readFully(input, SKIP_BUF, 0,
                                  (int) Math.min(numToSkip, SKIP_BUF_SIZE));

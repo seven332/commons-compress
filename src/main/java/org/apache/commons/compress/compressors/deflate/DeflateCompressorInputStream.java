@@ -24,18 +24,24 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
 import org.apache.commons.compress.compressors.CompressorInputStream;
+import org.apache.commons.compress.utils.CountingInputStream;
+import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.compress.utils.InputStreamStatistics;
 
 /**
  * Deflate decompressor.
  * @since 1.9
  */
-public class DeflateCompressorInputStream extends CompressorInputStream {
+public class DeflateCompressorInputStream extends CompressorInputStream
+    implements InputStreamStatistics {
+
     private static final int MAGIC_1 = 0x78;
     private static final int MAGIC_2a = 0x01;
     private static final int MAGIC_2b = 0x5e;
     private static final int MAGIC_2c = 0x9c;
     private static final int MAGIC_2d = 0xda;
-    
+
+    private final CountingInputStream countingStream;
     private final InputStream in;
     private final Inflater inflater;
 
@@ -60,9 +66,9 @@ public class DeflateCompressorInputStream extends CompressorInputStream {
     public DeflateCompressorInputStream(final InputStream inputStream,
                                         final DeflateParameters parameters) {
         inflater = new Inflater(!parameters.withZlibHeader());
-        in = new InflaterInputStream(inputStream, inflater);
+        in = new InflaterInputStream(countingStream = new CountingInputStream(inputStream), inflater);
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public int read() throws IOException {
@@ -82,7 +88,7 @@ public class DeflateCompressorInputStream extends CompressorInputStream {
     /** {@inheritDoc} */
     @Override
     public long skip(final long n) throws IOException {
-        return in.skip(n);
+        return IOUtils.skip(in, n);
     }
 
     /** {@inheritDoc} */
@@ -100,18 +106,26 @@ public class DeflateCompressorInputStream extends CompressorInputStream {
             inflater.end();
         }
     }
-    
+
+    /**
+     * @since 1.17
+     */
+    @Override
+    public long getCompressedCount() {
+        return countingStream.getBytesRead();
+    }
+
     /**
      * Checks if the signature matches what is expected for a zlib / deflated file
      *  with the zlib header.
-     * 
+     *
      * @param signature
      *            the bytes to check
      * @param length
      *            the number of bytes to check
      * @return true, if this stream is zlib / deflate compressed with a header
      * stream, false otherwise
-     * 
+     *
      * @since 1.10
      */
     public static boolean matches(final byte[] signature, final int length) {

@@ -207,7 +207,7 @@ public class ZipFileTest {
     }
 
     /**
-     * Test case for 
+     * Test case for
      * <a href="https://issues.apache.org/jira/browse/COMPRESS-208"
      * >COMPRESS-208</a>.
      */
@@ -314,7 +314,7 @@ public class ZipFileTest {
     }
 
     /**
-     * Test case for 
+     * Test case for
      * <a href="https://issues.apache.org/jira/browse/COMPRESS-264"
      * >COMPRESS-264</a>.
      */
@@ -581,6 +581,124 @@ public class ZipFileTest {
         entry.setAlignment(3);
     }
 
+    @Test
+    public void nameSourceDefaultsToName() throws Exception {
+        nameSource("bla.zip", "test1.xml", ZipArchiveEntry.NameSource.NAME);
+    }
+
+    @Test
+    public void nameSourceIsSetToUnicodeExtraField() throws Exception {
+        nameSource("utf8-winzip-test.zip", "\u20AC_for_Dollar.txt",
+                   ZipArchiveEntry.NameSource.UNICODE_EXTRA_FIELD);
+    }
+
+    @Test
+    public void nameSourceIsSetToEFS() throws Exception {
+        nameSource("utf8-7zip-test.zip", "\u20AC_for_Dollar.txt",
+                   ZipArchiveEntry.NameSource.NAME_WITH_EFS_FLAG);
+    }
+
+    /**
+     * @see "https://issues.apache.org/jira/browse/COMPRESS-380"
+     */
+    @Test
+    public void readDeflate64CompressedStream() throws Exception {
+        final File input = getFile("COMPRESS-380/COMPRESS-380-input");
+        final File archive = getFile("COMPRESS-380/COMPRESS-380.zip");
+        try (FileInputStream in = new FileInputStream(input);
+             ZipFile zf = new ZipFile(archive)) {
+            byte[] orig = IOUtils.toByteArray(in);
+            ZipArchiveEntry e = zf.getEntry("input2");
+            try (InputStream s = zf.getInputStream(e)) {
+                byte[] fromZip = IOUtils.toByteArray(s);
+                assertArrayEquals(orig, fromZip);
+            }
+        }
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEofUsingDeflate() throws Exception {
+        singleByteReadConsistentlyReturnsMinusOneAtEof(getFile("bla.zip"));
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEofUsingStore() throws Exception {
+        singleByteReadConsistentlyReturnsMinusOneAtEof(getFile("COMPRESS-264.zip"));
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEofUsingUnshrink() throws Exception {
+        singleByteReadConsistentlyReturnsMinusOneAtEof(getFile("SHRUNK.ZIP"));
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEofUsingExplode() throws Exception {
+        singleByteReadConsistentlyReturnsMinusOneAtEof(getFile("imploding-8Kdict-3trees.zip"));
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEofUsingDeflate64() throws Exception {
+        singleByteReadConsistentlyReturnsMinusOneAtEof(getFile("COMPRESS-380/COMPRESS-380.zip"));
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEofUsingBzip2() throws Exception {
+        singleByteReadConsistentlyReturnsMinusOneAtEof(getFile("bzip2-zip.zip"));
+    }
+
+    private void singleByteReadConsistentlyReturnsMinusOneAtEof(File file) throws Exception {
+        try (ZipFile archive = new ZipFile(file)) {
+            ZipArchiveEntry e = archive.getEntries().nextElement();
+            try (InputStream is = archive.getInputStream(e)) {
+                IOUtils.toByteArray(is);
+                assertEquals(-1, is.read());
+                assertEquals(-1, is.read());
+            }
+        }
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEofUsingDeflate() throws Exception {
+        multiByteReadConsistentlyReturnsMinusOneAtEof(getFile("bla.zip"));
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEofUsingStore() throws Exception {
+        multiByteReadConsistentlyReturnsMinusOneAtEof(getFile("COMPRESS-264.zip"));
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEofUsingUnshrink() throws Exception {
+        multiByteReadConsistentlyReturnsMinusOneAtEof(getFile("SHRUNK.ZIP"));
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEofUsingExplode() throws Exception {
+        multiByteReadConsistentlyReturnsMinusOneAtEof(getFile("imploding-8Kdict-3trees.zip"));
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEofUsingDeflate64() throws Exception {
+        multiByteReadConsistentlyReturnsMinusOneAtEof(getFile("COMPRESS-380/COMPRESS-380.zip"));
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEofUsingBzip2() throws Exception {
+        multiByteReadConsistentlyReturnsMinusOneAtEof(getFile("bzip2-zip.zip"));
+    }
+
+    private void multiByteReadConsistentlyReturnsMinusOneAtEof(File file) throws Exception {
+        byte[] buf = new byte[2];
+        try (ZipFile archive = new ZipFile(file)) {
+            ZipArchiveEntry e = archive.getEntries().nextElement();
+            try (InputStream is = archive.getInputStream(e)) {
+                IOUtils.toByteArray(is);
+                assertEquals(-1, is.read(buf));
+                assertEquals(-1, is.read(buf));
+            }
+        }
+    }
+
     private void assertAllReadMethods(byte[] expected, ZipFile zipFile, ZipArchiveEntry entry) {
         // simple IOUtil read
         try (InputStream stream = zf.getInputStream(entry)) {
@@ -672,5 +790,13 @@ public class ZipFileTest {
         assertEquals("src/main/java/org/apache/commons/compress/archivers/zip/"
                      + expectedName + ".java",
                      ze.getName());
+    }
+
+    private static void nameSource(String archive, String entry, ZipArchiveEntry.NameSource expected) throws Exception {
+        try (ZipFile zf = new ZipFile(getFile(archive))) {
+            ZipArchiveEntry ze = zf.getEntry(entry);
+            assertEquals(entry, ze.getName());
+            assertEquals(expected, ze.getNameSource());
+        }
     }
 }

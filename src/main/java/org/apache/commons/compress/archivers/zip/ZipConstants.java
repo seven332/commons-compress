@@ -23,8 +23,6 @@ package org.apache.commons.compress.archivers.zip;
  * @since 1.3
  */
 final class ZipConstants {
-    private ZipConstants() { }
-
     /** Masks last eight bits */
     static final int BYTE_MASK = 0xFF;
 
@@ -39,6 +37,12 @@ final class ZipConstants {
 
     /** Initial ZIP specification version */
     static final int INITIAL_VERSION = 10;
+
+    /**
+     * ZIP specification version that introduced DEFLATE compression method.
+     * @since 1.15
+     */
+    static final int DEFLATE_MIN_VERSION = 20;
 
     /** ZIP specification version that introduced data descriptor method */
     static final int DATA_DESCRIPTOR_MIN_VERSION = 20;
@@ -57,5 +61,7 @@ final class ZipConstants {
      * extensions are used.
      */
     static final long ZIP64_MAGIC = 0xFFFFFFFFL;
+
+    private ZipConstants() { }
 
 }

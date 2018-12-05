@@ -13,7 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package org.apache.commons.compress.archivers.tar;
@@ -46,11 +46,14 @@ public class TarUtilsTest {
         assertEquals(off, 30);
         sb2 = TarUtils.parseName(buff, 1, buff.length-1);
         assertEquals(sb1, sb2);
+        buff = new byte[]{0, 1, 0};
+        sb2 = TarUtils.parseName(buff, 0, 3);
+        assertEquals("", sb2);
     }
 
     @Test
     public void testParseOctal() throws Exception{
-        long value; 
+        long value;
         byte [] buffer;
         final long MAX_OCTAL  = 077777777777L; // Allowed 11 digits
         final long MAX_OCTAL_OVERFLOW  = 0777777777777L; // in fact 12 for some implementations
@@ -160,7 +163,8 @@ public class TarUtilsTest {
         checkRoundTripOctalOrBinary(1, length);
         checkRoundTripOctalOrBinary(TarConstants.MAXSIZE, length); // will need binary format
         checkRoundTripOctalOrBinary(-1, length); // will need binary format
-        checkRoundTripOctalOrBinary(0xff00000000000001l, length);
+        checkRoundTripOctalOrBinary(0xffffffffffffffl, length);
+        checkRoundTripOctalOrBinary(-0xffffffffffffffl, length);
     }
 
     // Check correct trailing bytes are generated
@@ -365,6 +369,16 @@ public class TarUtilsTest {
             32, 32, 32, 32, 32, 49, 48, 48, 48, 48, 48, 32
         };
         assertEquals(expected, TarUtils.parseOctalOrBinary(buffer, 0, buffer.length));
+    }
+
+    @Test
+    public void testRoundTripOctalOrBinary8_ValueTooBigForBinary() {
+        try {
+            checkRoundTripOctalOrBinary(Long.MAX_VALUE, 8);
+            fail("Should throw exception - value is too long to fit buffer of this len");
+        } catch (IllegalArgumentException e) {
+            assertEquals("Value 9223372036854775807 is too large for 8 byte field.", e.getMessage());
+        }
     }
 
 }

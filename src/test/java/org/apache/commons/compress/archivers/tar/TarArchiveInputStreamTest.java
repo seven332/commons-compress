@@ -23,6 +23,7 @@ import static org.apache.commons.compress.AbstractTestCase.mkdir;
 import static org.apache.commons.compress.AbstractTestCase.rmdir;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.utils.CharsetNames;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Test;
@@ -310,6 +312,64 @@ public class TarArchiveInputStreamTest {
             final TarArchiveEntry entry = is.getNextTarEntry();
             assertEquals("package/package.json", entry.getName());
             assertNull(is.getNextTarEntry());
+        }
+    }
+    @Test
+    public void testGetAndSetOfPaxEntry() throws Exception {
+        try (TarArchiveInputStream is = getTestStream("/COMPRESS-356.tar")) {
+            final TarArchiveEntry entry = is.getNextTarEntry();
+            assertEquals("package/package.json", entry.getName());
+            assertEquals(is.getCurrentEntry(),entry);
+            TarArchiveEntry weaselEntry = new TarArchiveEntry(entry.getName());
+            weaselEntry.setSize(entry.getSize());
+            is.setCurrentEntry(weaselEntry);
+            assertEquals(entry,is.getCurrentEntry());
+            assertFalse(entry == is.getCurrentEntry());
+            assertTrue(weaselEntry == is.getCurrentEntry());
+            try {
+               is.setCurrentEntry(null);
+               is.read();
+               fail("should abort because current entry is nulled");
+            }  catch(IllegalStateException e) {
+                // expected
+            }
+            is.setCurrentEntry(entry);
+            is.read();
+        }
+    }
+
+    /**
+     * @link "https://issues.apache.org/jira/browse/COMPRESS-417"
+     */
+    @Test
+    public void skipsDevNumbersWhenEntryIsNoDevice() throws Exception {
+        try (TarArchiveInputStream is = getTestStream("/COMPRESS-417.tar")) {
+            assertEquals("test1.xml", is.getNextTarEntry().getName());
+            assertEquals("test2.xml", is.getNextTarEntry().getName());
+            assertNull(is.getNextTarEntry());
+        }
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEof() throws Exception {
+        try (FileInputStream in = new FileInputStream(getFile("bla.tar"));
+             TarArchiveInputStream archive = new TarArchiveInputStream(in)) {
+            ArchiveEntry e = archive.getNextEntry();
+            IOUtils.toByteArray(archive);
+            assertEquals(-1, archive.read());
+            assertEquals(-1, archive.read());
+        }
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEof() throws Exception {
+        byte[] buf = new byte[2];
+        try (FileInputStream in = new FileInputStream(getFile("bla.tar"));
+             TarArchiveInputStream archive = new TarArchiveInputStream(in)) {
+            ArchiveEntry e = archive.getNextEntry();
+            IOUtils.toByteArray(archive);
+            assertEquals(-1, archive.read(buf));
+            assertEquals(-1, archive.read(buf));
         }
     }
 

@@ -26,23 +26,25 @@ import org.apache.commons.compress.archivers.zip.ZipUtil;
 
 /**
  * An entry in an ARJ archive.
- * 
+ *
  * @NotThreadSafe
  * @since 1.6
  */
 public class ArjArchiveEntry implements ArchiveEntry {
     private final LocalFileHeader localFileHeader;
-    
+
     public ArjArchiveEntry() {
         localFileHeader = new LocalFileHeader();
     }
-    
+
     ArjArchiveEntry(final LocalFileHeader localFileHeader) {
         this.localFileHeader = localFileHeader;
     }
 
     /**
      * Get this entry's name.
+     *
+     * <p>This method returns the raw name as it is stored inside of the archive.</p>
      *
      * @return This entry's name.
      */
@@ -91,7 +93,7 @@ public class ArjArchiveEntry implements ArchiveEntry {
      */
     @Override
     public Date getLastModifiedDate() {
-        final long ts = isHostOsUnix() ? localFileHeader.dateTimeModified * 1000l
+        final long ts = isHostOsUnix() ? localFileHeader.dateTimeModified * 1000L
             : ZipUtil.dosToJavaTime(0xFFFFFFFFL & localFileHeader.dateTimeModified);
         return new Date(ts);
     }
@@ -158,5 +160,5 @@ public class ArjArchiveEntry implements ArchiveEntry {
         public static final int WIN95 = 10;
         public static final int WIN32 = 11;
     }
-    
+
 }

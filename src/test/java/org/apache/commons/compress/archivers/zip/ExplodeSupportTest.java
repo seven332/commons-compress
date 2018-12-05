@@ -20,6 +20,8 @@
 package org.apache.commons.compress.archivers.zip;
 
 import static org.junit.Assert.*;
+
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -74,7 +76,7 @@ public class ExplodeSupportTest {
         assertEquals("method", ZipMethod.IMPLODING.getCode(), entry.getMethod());
 
         final InputStream bio = new BoundedInputStream(zin, entry.getSize());
-        
+
         final ByteArrayOutputStream bout = new ByteArrayOutputStream();
         final CheckedOutputStream out = new CheckedOutputStream(bout, new CRC32());
         IOUtils.copy(bio, out);
@@ -97,6 +99,22 @@ public class ExplodeSupportTest {
     @Test
     public void testTikaTestStream() throws IOException {
         testZipStreamWithImplodeCompression("moby-imploded.zip", "README");
+    }
+
+    @Test
+    public void testConstructorThrowsExceptions() {
+        try {
+            ExplodingInputStream eis = new  ExplodingInputStream(4095,2,new ByteArrayInputStream(new byte[] {}));
+            fail("should have failed with illegal argument exception");
+        } catch (IllegalArgumentException e) {
+        }
+
+        try {
+            ExplodingInputStream eis = new  ExplodingInputStream(4096,4,new ByteArrayInputStream(new byte[] {}));
+            fail("should have failed with illegal argument exception");
+        } catch (IllegalArgumentException e) {
+        }
+
     }
 
 }

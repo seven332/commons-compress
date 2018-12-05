@@ -20,10 +20,11 @@ package org.apache.commons.compress.archivers.tar;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipEncoding;
 import org.apache.commons.compress.utils.ArchiveUtils;
@@ -133,7 +134,7 @@ import org.apache.commons.compress.utils.ArchiveUtils;
  *  char prefix[131];		// offset 345
  *  char atime[12];             // offset 476
  *  char ctime[12];             // offset 488
- *  char mfill[8];              // offset 500 
+ *  char mfill[8];              // offset 500
  *  char xmagic[4];             // offset 508  "tar"
  * };
  * </pre>
@@ -148,8 +149,8 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /** The entry's name. */
     private String name = "";
 
-    /** Whether to enforce leading slashes on the name */
-    private boolean preserveLeadingSlashes;
+    /** Whether to allow leading slashes or drive names inside the name */
+    private final boolean preserveAbsolutePath;
 
     /** The entry's permission mode. */
     private int mode;
@@ -207,6 +208,9 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /** The entry's file reference */
     private final File file;
 
+    /** Extra, user supplied pax headers     */
+    private final Map<String,String> extraPaxHeaders = new HashMap<>();
+
     /** Maximum length of a user's name in the tar file */
     public static final int MAX_NAMELEN = 31;
 
@@ -219,10 +223,11 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /** Convert millis to seconds */
     public static final int MILLIS_PER_SECOND = 1000;
 
+
     /**
      * Construct an empty entry and prepares the header values.
      */
-    private TarArchiveEntry() {
+    private TarArchiveEntry(boolean preserveAbsolutePath) {
         String user = System.getProperty("user.name", "");
 
         if (user.length() > MAX_NAMELEN) {
@@ -231,11 +236,16 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
 
         this.userName = user;
         this.file = null;
+        this.preserveAbsolutePath = preserveAbsolutePath;
     }
 
     /**
      * Construct an entry with only a name. This allows the programmer
      * to construct the entry's header "by hand". File is set to null.
+     *
+     * <p>The entry's name will be the value of the {@code name}
+     * argument with all file separators replaced by forward slashes
+     * and leading slashes as well as Windows drive letters stripped.</p>
      *
      * @param name the entry name
      */
@@ -247,18 +257,21 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
      * Construct an entry with only a name. This allows the programmer
      * to construct the entry's header "by hand". File is set to null.
      *
+     * <p>The entry's name will be the value of the {@code name}
+     * argument with all file separators replaced by forward slashes.
+     * Leading slashes and Windows drive letters are stripped if
+     * {@code preserveAbsolutePath} is {@code false}.</p>
+     *
      * @param name the entry name
-     * @param preserveLeadingSlashes whether to allow leading slashes
-     * in the name.
+     * @param preserveAbsolutePath whether to allow leading slashes
+     * or drive letters in the name.
      *
      * @since 1.1
      */
-    public TarArchiveEntry(String name, final boolean preserveLeadingSlashes) {
-        this();
+    public TarArchiveEntry(String name, final boolean preserveAbsolutePath) {
+        this(preserveAbsolutePath);
 
-        this.preserveLeadingSlashes = preserveLeadingSlashes;
-
-        name = normalizeFileName(name, preserveLeadingSlashes);
+        name = normalizeFileName(name, preserveAbsolutePath);
         final boolean isDir = name.endsWith("/");
 
         this.name = name;
@@ -271,6 +284,11 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /**
      * Construct an entry with a name and a link flag.
      *
+     * <p>The entry's name will be the value of the {@code name}
+     * argument with all file separators replaced by forward slashes
+     * and leading slashes as well as Windows drive letters
+     * stripped.</p>
+     *
      * @param name the entry name
      * @param linkFlag the entry link flag.
      */
@@ -281,15 +299,20 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /**
      * Construct an entry with a name and a link flag.
      *
+     * <p>The entry's name will be the value of the {@code name}
+     * argument with all file separators replaced by forward slashes.
+     * Leading slashes and Windows drive letters are stripped if
+     * {@code preserveAbsolutePath} is {@code false}.</p>
+     *
      * @param name the entry name
      * @param linkFlag the entry link flag.
-     * @param preserveLeadingSlashes whether to allow leading slashes
-     * in the name.
+     * @param preserveAbsolutePath whether to allow leading slashes
+     * or drive letters in the name.
      *
      * @since 1.5
      */
-    public TarArchiveEntry(final String name, final byte linkFlag, final boolean preserveLeadingSlashes) {
-        this(name, preserveLeadingSlashes);
+    public TarArchiveEntry(final String name, final byte linkFlag, final boolean preserveAbsolutePath) {
+        this(name, preserveAbsolutePath);
         this.linkFlag = linkFlag;
         if (linkFlag == LF_GNUTYPE_LONGNAME) {
             magic = MAGIC_GNU;
@@ -302,6 +325,12 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
      * header is constructed from information from the file.
      * The name is set from the normalized file path.
      *
+     * <p>The entry's name will be the value of the {@code file}'s
+     * path with all file separators replaced by forward slashes and
+     * leading slashes as well as Windows drive letters stripped. The
+     * name will end in a slash if the {@code file} represents a
+     * directory.</p>
+     *
      * @param file The file that the entry represents.
      */
     public TarArchiveEntry(final File file) {
@@ -311,6 +340,12 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /**
      * Construct an entry for a file. File is set to file, and the
      * header is constructed from information from the file.
+     *
+     * <p>The entry's name will be the value of the {@code fileName}
+     * argument with all file separators replaced by forward slashes
+     * and leading slashes as well as Windows drive letters stripped.
+     * The name will end in a slash if the {@code file} represents a
+     * directory.</p>
      *
      * @param file The file that the entry represents.
      * @param fileName the name to be used for the entry.
@@ -338,6 +373,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
 
         this.modTime = file.lastModified() / MILLIS_PER_SECOND;
         this.userName = "";
+        preserveAbsolutePath = false;
     }
 
     /**
@@ -348,7 +384,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
      * @throws IllegalArgumentException if any of the numeric fields have an invalid format
      */
     public TarArchiveEntry(final byte[] headerBuf) {
-        this();
+        this(false);
         parseTarHeader(headerBuf);
     }
 
@@ -364,7 +400,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
      */
     public TarArchiveEntry(final byte[] headerBuf, final ZipEncoding encoding)
         throws IOException {
-        this();
+        this(false);
         parseTarHeader(headerBuf, encoding);
     }
 
@@ -419,6 +455,8 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     /**
      * Get this entry's name.
      *
+     * <p>This method returns the raw name as it is stored inside of the archive.</p>
+     *
      * @return This entry's name.
      */
     @Override
@@ -432,7 +470,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
      * @param name This entry's new name.
      */
     public void setName(final String name) {
-        this.name = normalizeFileName(name, this.preserveLeadingSlashes);
+        this.name = normalizeFileName(name, this.preserveAbsolutePath);
     }
 
     /**
@@ -859,11 +897,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
             return true;
         }
 
-        if (!isPaxHeader() && !isGlobalPaxHeader() && getName().endsWith("/")) {
-            return true;
-        }
-
-        return false;
+        return !isPaxHeader() && !isGlobalPaxHeader() && getName().endsWith("/");
     }
 
     /**
@@ -941,6 +975,147 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     public boolean isSparse() {
         return isGNUSparse() || isStarSparse();
     }
+
+    /**
+     * get extra PAX Headers
+     * @return read-only map containing any extra PAX Headers
+     * @since 1.15
+     */
+    public Map<String, String> getExtraPaxHeaders() {
+        return Collections.unmodifiableMap(extraPaxHeaders);
+    }
+
+    /**
+     * clear all extra PAX headers.
+     * @since 1.15
+     */
+    public void clearExtraPaxHeaders() {
+        extraPaxHeaders.clear();
+    }
+
+    /**
+     * add a PAX header to this entry. If the header corresponds to an existing field in the entry,
+     * that field will be set; otherwise the header will be added to the extraPaxHeaders Map
+     * @param name  The full name of the header to set.
+     * @param value value of header.
+     * @since 1.15
+     */
+    public void addPaxHeader(String name,String value) {
+         processPaxHeader(name,value);
+    }
+
+    /**
+     * get named extra PAX header
+     * @param name The full name of an extended PAX header to retrieve
+     * @return The value of the header, if any.
+     * @since 1.15
+     */
+    public String getExtraPaxHeader(String name) {
+        return extraPaxHeaders.get(name);
+    }
+
+    /**
+     * Update the entry using a map of pax headers.
+     * @param headers
+     * @since 1.15
+     */
+    void updateEntryFromPaxHeaders(Map<String, String> headers) {
+        for (final Map.Entry<String, String> ent : headers.entrySet()) {
+            final String key = ent.getKey();
+            final String val = ent.getValue();
+            processPaxHeader(key, val, headers);
+        }
+    }
+
+    /**
+     * process one pax header, using the entries extraPaxHeaders map as source for extra headers
+     * used when handling entries for sparse files.
+     * @param key
+     * @param val
+     * @since 1.15
+     */
+    private void processPaxHeader(String key, String val) {
+        processPaxHeader(key,val,extraPaxHeaders);
+    }
+
+    /**
+     * Process one pax header, using the supplied map as source for extra headers to be used when handling
+     * entries for sparse files
+     *
+     * @param key  the header name.
+     * @param val  the header value.
+     * @param headers  map of headers used for dealing with sparse file.
+     * @since 1.15
+     */
+    private void processPaxHeader(String key, String val, Map<String, String> headers) {
+    /*
+     * The following headers are defined for Pax.
+     * atime, ctime, charset: cannot use these without changing TarArchiveEntry fields
+     * mtime
+     * comment
+     * gid, gname
+     * linkpath
+     * size
+     * uid,uname
+     * SCHILY.devminor, SCHILY.devmajor: don't have setters/getters for those
+     *
+     * GNU sparse files use additional members, we use
+     * GNU.sparse.size to detect the 0.0 and 0.1 versions and
+     * GNU.sparse.realsize for 1.0.
+     *
+     * star files use additional members of which we use
+     * SCHILY.filetype in order to detect star sparse files.
+     *
+     * If called from addExtraPaxHeader, these additional headers must be already present .
+     */
+        switch (key) {
+            case "path":
+                setName(val);
+                break;
+            case "linkpath":
+                setLinkName(val);
+                break;
+            case "gid":
+                setGroupId(Long.parseLong(val));
+                break;
+            case "gname":
+                setGroupName(val);
+                break;
+            case "uid":
+                setUserId(Long.parseLong(val));
+                break;
+            case "uname":
+                setUserName(val);
+                break;
+            case "size":
+                setSize(Long.parseLong(val));
+                break;
+            case "mtime":
+                setModTime((long) (Double.parseDouble(val) * 1000));
+                break;
+            case "SCHILY.devminor":
+                setDevMinor(Integer.parseInt(val));
+                break;
+            case "SCHILY.devmajor":
+                setDevMajor(Integer.parseInt(val));
+                break;
+            case "GNU.sparse.size":
+                fillGNUSparse0xData(headers);
+                break;
+            case "GNU.sparse.realsize":
+                fillGNUSparse1xData(headers);
+                break;
+            case "SCHILY.filetype":
+                if ("sparse".equals(val)) {
+                    fillStarSparseData(headers);
+                }
+                break;
+            default:
+                extraPaxHeaders.put(key,val);
+        }
+    }
+
+
 
     /**
      * If this entry represents a file, and the file is a directory, return
@@ -1047,7 +1222,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
     private int writeEntryHeaderField(final long value, final byte[] outbuf, final int offset,
                                       final int length, final boolean starMode) {
         if (!starMode && (value < 0
-                          || value >= 1l << 3 * (length - 1))) {
+                          || value >= 1L << 3 * (length - 1))) {
             // value doesn't fit into field when written as octal
             // number, will be written to PAX header or causes an
             // error
@@ -1125,10 +1300,14 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
         groupName = oldStyle ? TarUtils.parseName(header, offset, GNAMELEN)
             : TarUtils.parseName(header, offset, GNAMELEN, encoding);
         offset += GNAMELEN;
-        devMajor = (int) TarUtils.parseOctalOrBinary(header, offset, DEVLEN);
-        offset += DEVLEN;
-        devMinor = (int) TarUtils.parseOctalOrBinary(header, offset, DEVLEN);
-        offset += DEVLEN;
+        if (linkFlag == LF_CHR || linkFlag == LF_BLK) {
+            devMajor = (int) TarUtils.parseOctalOrBinary(header, offset, DEVLEN);
+            offset += DEVLEN;
+            devMinor = (int) TarUtils.parseOctalOrBinary(header, offset, DEVLEN);
+            offset += DEVLEN;
+        } else {
+            offset += 2 * DEVLEN;
+        }
 
         final int type = evaluateType(header);
         switch (type) {
@@ -1142,7 +1321,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
             isExtended = TarUtils.parseBoolean(header, offset);
             offset += ISEXTENDEDLEN_GNU;
             realSize = TarUtils.parseOctal(header, offset, REALSIZELEN_GNU);
-            offset += REALSIZELEN_GNU;
+            offset += REALSIZELEN_GNU; // NOSONAR - assignment as documentation
             break;
         }
         case FORMAT_XSTAR: {
@@ -1176,29 +1355,31 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
      * turns path separators into forward slahes.
      */
     private static String normalizeFileName(String fileName,
-                                            final boolean preserveLeadingSlashes) {
-        final String osname = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
+                                            final boolean preserveAbsolutePath) {
+        if (!preserveAbsolutePath) {
+            final String osname = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
 
-        if (osname != null) {
+            if (osname != null) {
 
-            // Strip off drive letters!
-            // REVIEW Would a better check be "(File.separator == '\')"?
+                // Strip off drive letters!
+                // REVIEW Would a better check be "(File.separator == '\')"?
 
-            if (osname.startsWith("windows")) {
-                if (fileName.length() > 2) {
-                    final char ch1 = fileName.charAt(0);
-                    final char ch2 = fileName.charAt(1);
+                if (osname.startsWith("windows")) {
+                    if (fileName.length() > 2) {
+                        final char ch1 = fileName.charAt(0);
+                        final char ch2 = fileName.charAt(1);
 
-                    if (ch2 == ':'
-                        && (ch1 >= 'a' && ch1 <= 'z'
-                            || ch1 >= 'A' && ch1 <= 'Z')) {
-                        fileName = fileName.substring(2);
+                        if (ch2 == ':'
+                            && (ch1 >= 'a' && ch1 <= 'z'
+                                || ch1 >= 'A' && ch1 <= 'Z')) {
+                            fileName = fileName.substring(2);
+                        }
                     }
-                }
-            } else if (osname.contains("netware")) {
-                final int colon = fileName.indexOf(':');
-                if (colon != -1) {
-                    fileName = fileName.substring(colon + 1);
+                } else if (osname.contains("netware")) {
+                    final int colon = fileName.indexOf(':');
+                    if (colon != -1) {
+                        fileName = fileName.substring(colon + 1);
+                    }
                 }
             }
         }
@@ -1208,7 +1389,7 @@ public class TarArchiveEntry implements ArchiveEntry, TarConstants {
         // No absolute pathnames
         // Windows (and Posix?) paths can start with "\\NetworkDrive\",
         // so we loop on starting /'s.
-        while (!preserveLeadingSlashes && fileName.startsWith("/")) {
+        while (!preserveAbsolutePath && fileName.startsWith("/")) {
             fileName = fileName.substring(1);
         }
         return fileName;

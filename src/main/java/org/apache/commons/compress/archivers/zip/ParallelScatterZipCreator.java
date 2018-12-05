@@ -227,6 +227,10 @@ public class ParallelScatterZipCreator {
      * before calling this method.
      * </p>
      *
+     * <p>Calling this method will shut down the {@link ExecutorService} used by this class. If any of the {@link
+     * Callable}s {@link #submit}ted to this instance throws an exception, the archive can not be created properly and
+     * this method will throw an exception.</p>
+     *
      * @param targetStream The {@link ZipArchiveOutputStream} to receive the contents of the scatter streams
      * @throws IOException          If writing fails
      * @throws InterruptedException If we get interrupted
@@ -236,19 +240,24 @@ public class ParallelScatterZipCreator {
             throws IOException, InterruptedException, ExecutionException {
 
         // Make sure we catch any exceptions from parallel phase
-        for (final Future<?> future : futures) {
-            future.get();
+        try {
+            for (final Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            es.shutdown();
         }
 
-        es.shutdown();
-        es.awaitTermination(1000 * 60l, TimeUnit.SECONDS);  // == Infinity. We really *must* wait for this to complete
+        es.awaitTermination(1000 * 60L, TimeUnit.SECONDS);  // == Infinity. We really *must* wait for this to complete
 
         // It is important that all threads terminate before we go on, ensure happens-before relationship
         compressionDoneAt = System.currentTimeMillis();
 
-        for (final ScatterZipOutputStream scatterStream : streams) {
-            scatterStream.writeTo(targetStream);
-            scatterStream.close();
+        synchronized (streams) {
+            for (final ScatterZipOutputStream scatterStream : streams) {
+                scatterStream.writeTo(targetStream);
+                scatterStream.close();
+            }
         }
 
         scatterDoneAt = System.currentTimeMillis();

@@ -409,7 +409,7 @@ public class DumpArchiveEntry implements ArchiveEntry {
 
         final DumpArchiveEntry rhs = (DumpArchiveEntry) o;
 
-        if ((header == null) || (rhs.header == null)) {
+        if (rhs.header == null) {
             return false;
         }
 
@@ -417,8 +417,9 @@ public class DumpArchiveEntry implements ArchiveEntry {
             return false;
         }
 
-        if ((summary == null && rhs.summary != null)
-            || (summary != null && !summary.equals(rhs.summary))) {
+        // summary is always null right now, but this may change some day
+        if ((summary == null && rhs.summary != null) // NOSONAR
+                || (summary != null && !summary.equals(rhs.summary))) { // NOSONAR
             return false;
         }
 
@@ -561,6 +562,9 @@ public class DumpArchiveEntry implements ArchiveEntry {
 
     /**
      * Returns the name of the entry.
+     *
+     * <p>This method returns the raw name as it is stored inside of the archive.</p>
+     *
      * @return the name of the entry.
      */
     @Override
@@ -785,7 +789,7 @@ public class DumpArchiveEntry implements ArchiveEntry {
 
         private int code;
 
-        private TYPE(final int code) {
+        TYPE(final int code) {
             this.code = code;
         }
 
@@ -818,7 +822,7 @@ public class DumpArchiveEntry implements ArchiveEntry {
 
         private int code;
 
-        private PERMISSION(final int code) {
+        PERMISSION(final int code) {
             this.code = code;
         }
 

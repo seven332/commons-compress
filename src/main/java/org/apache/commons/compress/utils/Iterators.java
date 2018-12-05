@@ -24,7 +24,7 @@ import java.util.Iterator;
 
 /**
  * Iterator utilities.
- * 
+ *
  * @since 1.13.
  */
 public class Iterators {
@@ -32,7 +32,7 @@ public class Iterators {
     /**
      * Adds all the elements in the source {@code iterator} to the target
      * {@code collection}.
-     * 
+     *
      * <p>
      * When this method returns, the {@code iterator} will be "empty": its
      * {@code hasNext()} method returns {@code false}.

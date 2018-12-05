@@ -25,12 +25,18 @@ import org.apache.commons.compress.MemoryLimitException;
 import org.tukaani.xz.LZMAInputStream;
 
 import org.apache.commons.compress.compressors.CompressorInputStream;
+import org.apache.commons.compress.utils.CountingInputStream;
+import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.compress.utils.InputStreamStatistics;
 
 /**
  * LZMA decompressor.
  * @since 1.6
  */
-public class LZMACompressorInputStream extends CompressorInputStream {
+public class LZMACompressorInputStream extends CompressorInputStream
+    implements InputStreamStatistics {
+
+    private final CountingInputStream countingStream;
     private final InputStream in;
 
     /**
@@ -47,7 +53,7 @@ public class LZMACompressorInputStream extends CompressorInputStream {
      */
     public LZMACompressorInputStream(final InputStream inputStream)
             throws IOException {
-        in = new LZMAInputStream(inputStream, -1);
+        in = new LZMAInputStream(countingStream = new CountingInputStream(inputStream), -1);
     }
 
     /**
@@ -70,7 +76,7 @@ public class LZMACompressorInputStream extends CompressorInputStream {
     public LZMACompressorInputStream(final InputStream inputStream, int memoryLimitInKb)
             throws IOException {
         try {
-            in = new LZMAInputStream(inputStream, memoryLimitInKb);
+            in = new LZMAInputStream(countingStream = new CountingInputStream(inputStream), memoryLimitInKb);
         } catch (org.tukaani.xz.MemoryLimitException e) {
             //convert to commons-compress exception
             throw new MemoryLimitException(e.getMemoryNeeded(), e.getMemoryLimit(), e);
@@ -96,7 +102,7 @@ public class LZMACompressorInputStream extends CompressorInputStream {
     /** {@inheritDoc} */
     @Override
     public long skip(final long n) throws IOException {
-        return in.skip(n);
+        return IOUtils.skip(in, n);
     }
 
     /** {@inheritDoc} */
@@ -112,34 +118,27 @@ public class LZMACompressorInputStream extends CompressorInputStream {
     }
 
     /**
+     * @since 1.17
+     */
+    @Override
+    public long getCompressedCount() {
+        return countingStream.getBytesRead();
+    }
+
+    /**
      * Checks if the signature matches what is expected for an lzma file.
-     * 
+     *
      * @param signature
      *            the bytes to check
      * @param length
      *            the number of bytes to check
      * @return true, if this stream is an lzma  compressed stream, false otherwise
-     * 
+     *
      * @since 1.10
      */
     public static boolean matches(final byte[] signature, final int length) {
-
-        if (signature == null || length < 3) {
-            return false;
-        }
-
-        if (signature[0] != 0x5d) {
-            return false;
-        }
-
-        if (signature[1] != 0) {
-            return false;
-        }
-
-        if (signature[2] != 0) {
-            return false;
-        }
-
-        return true;
+        return signature != null && length >= 3 &&
+                signature[0] == 0x5d && signature[1] == 0 &&
+                signature[2] == 0;
     }
 }

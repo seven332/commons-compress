@@ -26,7 +26,9 @@ import java.util.Arrays;
 import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.utils.BoundedInputStream;
 import org.apache.commons.compress.utils.ByteUtils;
+import org.apache.commons.compress.utils.CountingInputStream;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.compress.utils.InputStreamStatistics;
 
 /**
  * CompressorInputStream for the framing Snappy format.
@@ -36,7 +38,8 @@ import org.apache.commons.compress.utils.IOUtils;
  * @see <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format description</a>
  * @since 1.7
  */
-public class FramedSnappyCompressorInputStream extends CompressorInputStream {
+public class FramedSnappyCompressorInputStream extends CompressorInputStream
+    implements InputStreamStatistics {
 
     /**
      * package private for tests only.
@@ -58,9 +61,12 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
         's', 'N', 'a', 'P', 'p', 'Y'
     };
 
+    private long unreadBytes;
+    private final CountingInputStream countingStream;
+
     /** The underlying stream to read compressed data from */
     private final PushbackInputStream in;
-    
+
     /** The dialect to expect */
     private final FramedSnappyDialect dialect;
 
@@ -120,7 +126,8 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
                                              final int blockSize,
                                              final FramedSnappyDialect dialect)
         throws IOException {
-        this.in = new PushbackInputStream(in, 1);
+        countingStream = new CountingInputStream(in);
+        this.in = new PushbackInputStream(countingStream, 1);
         this.blockSize = blockSize;
         this.dialect = dialect;
         if (dialect.hasStreamIdentifier()) {
@@ -137,11 +144,14 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
     /** {@inheritDoc} */
     @Override
     public void close() throws IOException {
-        if (currentCompressedChunk != null) {
-            currentCompressedChunk.close();
-            currentCompressedChunk = null;
+        try {
+            if (currentCompressedChunk != null) {
+                currentCompressedChunk.close();
+                currentCompressedChunk = null;
+            }
+        } finally {
+            in.close();
         }
-        in.close();
     }
 
     /** {@inheritDoc} */
@@ -168,6 +178,14 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
             return currentCompressedChunk.available();
         }
         return 0;
+    }
+
+    /**
+     * @since 1.17
+     */
+    @Override
+    public long getCompressedCount() {
+        return countingStream.getBytesRead() - unreadBytes;
     }
 
     /**
@@ -213,6 +231,7 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
             endReached = true;
         } else if (type == STREAM_IDENTIFIER_TYPE) {
             in.unread(type);
+            unreadBytes++;
             pushedBackBytes(1);
             readStreamIdentifier();
             readNextBlock();
@@ -230,7 +249,7 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
             expectedChecksum = unmask(readCrc());
         } else if (type == COMPRESSED_CHUNK_TYPE) {
             final boolean expectChecksum = dialect.usesChecksumWithCompressedChunks();
-            final long size = readSize() - (expectChecksum ? 4l : 0l);
+            final long size = readSize() - (expectChecksum ? 4L : 0L);
             if (expectChecksum) {
                 expectedChecksum = unmask(readCrc());
             } else {
@@ -308,7 +327,7 @@ public class FramedSnappyCompressorInputStream extends CompressorInputStream {
      * Checks if the signature matches what is expected for a .sz file.
      *
      * <p>.sz files start with a chunk with tag 0xff and content sNaPpY.</p>
-     * 
+     *
      * @param signature the bytes to check
      * @param length    the number of bytes to check
      * @return          true if this is a .sz stream, false otherwise

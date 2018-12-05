@@ -25,6 +25,7 @@ import java.nio.ByteOrder;
 import org.apache.commons.compress.MemoryLimitException;
 import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.utils.BitInputStream;
+import org.apache.commons.compress.utils.InputStreamStatistics;
 
 /**
  * <p>Generic LZW implementation. It is used internally for
@@ -34,7 +35,7 @@ import org.apache.commons.compress.utils.BitInputStream;
  * @NotThreadSafe
  * @since 1.10
  */
-public abstract class LZWInputStream extends CompressorInputStream {
+public abstract class LZWInputStream extends CompressorInputStream implements InputStreamStatistics {
     protected static final int DEFAULT_CODE_SIZE = 9;
     protected static final int UNUSED_PREFIX = -1;
 
@@ -59,7 +60,7 @@ public abstract class LZWInputStream extends CompressorInputStream {
     public void close() throws IOException {
         in.close();
     }
-    
+
     @Override
     public int read() throws IOException {
         final int ret = read(oneByte);
@@ -68,7 +69,7 @@ public abstract class LZWInputStream extends CompressorInputStream {
         }
         return 0xff & oneByte[0];
     }
-    
+
     @Override
     public int read(final byte[] b, final int off, final int len) throws IOException {
         int bytesRead = readFromStack(b, off, len);
@@ -85,6 +86,14 @@ public abstract class LZWInputStream extends CompressorInputStream {
         }
         count(bytesRead);
         return bytesRead;
+    }
+
+    /**
+     * @since 1.17
+     */
+    @Override
+    public long getCompressedCount() {
+        return in.getBytesRead();
     }
 
     /**
@@ -164,7 +173,7 @@ public abstract class LZWInputStream extends CompressorInputStream {
         }
         return (int) in.readBits(codeSize);
     }
-    
+
     /**
      * Adds a new entry if the maximum table size hasn't been exceeded
      * and returns the new index.

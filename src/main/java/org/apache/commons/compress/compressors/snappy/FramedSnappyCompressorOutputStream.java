@@ -102,8 +102,11 @@ public class FramedSnappyCompressorOutputStream extends CompressorOutputStream {
 
     @Override
     public void close() throws IOException {
-        finish();
-        out.close();
+        try {
+            finish();
+        } finally {
+            out.close();
+        }
     }
 
     /**
@@ -124,7 +127,7 @@ public class FramedSnappyCompressorOutputStream extends CompressorOutputStream {
             o.write(buffer, 0, currentIndex);
         }
         byte[] b = baos.toByteArray();
-        writeLittleEndian(3, b.length + 4l /* CRC */);
+        writeLittleEndian(3, b.length + 4L /* CRC */);
         writeCrc();
         out.write(b);
         currentIndex = 0;

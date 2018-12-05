@@ -22,10 +22,14 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -40,6 +44,7 @@ import org.apache.commons.compress.utils.BoundedInputStream;
 import org.apache.commons.compress.utils.CRC32VerifyingInputStream;
 import org.apache.commons.compress.utils.CharsetNames;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.compress.utils.InputStreamStatistics;
 
 /**
  * Reads a 7z file, using SeekableByteChannel under
@@ -66,7 +71,7 @@ import org.apache.commons.compress.utils.IOUtils;
  * encrypted, neither file names nor file
  * contents can be read, but the use of
  * encryption isn't plausibly deniable.
- * 
+ *
  * @NotThreadSafe
  * @since 1.6
  */
@@ -81,6 +86,9 @@ public class SevenZFile implements Closeable {
     private InputStream currentFolderInputStream = null;
     private byte[] password;
 
+    private long compressedBytesReadFromCurrentEntry;
+    private long uncompressedBytesReadFromCurrentEntry;
+
     private final ArrayList<InputStream> deferredBlockStreams = new ArrayList<>();
 
     // shared with SevenZOutputFile and tests, neither mutates it
@@ -92,10 +100,23 @@ public class SevenZFile implements Closeable {
      * Reads a file as 7z archive
      *
      * @param filename the file to read
+     * @param password optional password if the archive is encrypted
+     * @throws IOException if reading the archive fails
+     * @since 1.17
+     */
+    public SevenZFile(final File filename, final char[] password) throws IOException {
+        this(Okio.store(filename), filename.getAbsolutePath(), utf16Decode(password), true);
+    }
+
+    /**
+     * Reads a file as 7z archive
+     *
+     * @param filename the file to read
      * @param password optional password if the archive is encrypted -
      * the byte array is supposed to be the UTF16-LE encoded
      * representation of the password.
      * @throws IOException if reading the archive fails
+     * @deprecated use the char[]-arg version for the password instead
      */
     public SevenZFile(final File filename, final byte[] password) throws IOException {
         this(Okio.store(filename), filename.getAbsolutePath(), password, true);
@@ -109,7 +130,47 @@ public class SevenZFile implements Closeable {
      * @since 1.13
      */
     public SevenZFile(final Store channel) throws IOException {
-        this(channel, "unknown archive", null);
+        this(channel, "unknown archive", (char[]) null);
+    }
+
+    /**
+     * Reads a SeekableByteChannel as 7z archive
+     *
+     * @param channel the channel to read
+     * @param password optional password if the archive is encrypted
+     * @throws IOException if reading the archive fails
+     * @since 1.17
+     */
+    public SevenZFile(final Store channel,
+                      final char[] password) throws IOException {
+        this(channel, "unknown archive", utf16Decode(password));
+    }
+
+    /**
+     * Reads a SeekableByteChannel as 7z archive
+     *
+     * @param channel the channel to read
+     * @param filename name of the archive - only used for error reporting
+     * @param password optional password if the archive is encrypted
+     * @throws IOException if reading the archive fails
+     * @since 1.17
+     */
+    public SevenZFile(final Store channel, String filename,
+                      final char[] password) throws IOException {
+        this(channel, filename, utf16Decode(password), false);
+    }
+
+    /**
+     * Reads a SeekableByteChannel as 7z archive
+     *
+     * @param channel the channel to read
+     * @param filename name of the archive - only used for error reporting
+     * @throws IOException if reading the archive fails
+     * @since 1.17
+     */
+    public SevenZFile(final Store channel, String filename)
+        throws IOException {
+        this(channel, filename, null, false);
     }
 
     /**
@@ -121,6 +182,7 @@ public class SevenZFile implements Closeable {
      * representation of the password.
      * @throws IOException if reading the archive fails
      * @since 1.13
+     * @deprecated use the char[]-arg version for the password instead
      */
     public SevenZFile(final Store channel,
                       final byte[] password) throws IOException {
@@ -137,6 +199,7 @@ public class SevenZFile implements Closeable {
      * representation of the password.
      * @throws IOException if reading the archive fails
      * @since 1.13
+     * @deprecated use the char[]-arg version for the password instead
      */
     public SevenZFile(final Store channel, String filename,
                       final byte[] password) throws IOException {
@@ -155,8 +218,7 @@ public class SevenZFile implements Closeable {
         try {
             archive = readHeaders(password);
             if (password != null) {
-                this.password = new byte[password.length];
-                System.arraycopy(password, 0, this.password, 0, password.length);
+                this.password = Arrays.copyOf(password, password.length);
             } else {
                 this.password = null;
             }
@@ -175,7 +237,7 @@ public class SevenZFile implements Closeable {
      * @throws IOException if reading the archive fails
      */
     public SevenZFile(final File filename) throws IOException {
-        this(filename, null);
+        this(filename, (char[]) null);
     }
 
     /**
@@ -211,6 +273,7 @@ public class SevenZFile implements Closeable {
         ++currentEntryIndex;
         final SevenZArchiveEntry entry = archive.files[currentEntryIndex];
         buildDecodingStream();
+        uncompressedBytesReadFromCurrentEntry = compressedBytesReadFromCurrentEntry = 0;
         return entry;
     }
 
@@ -663,7 +726,7 @@ public class SevenZFile implements Closeable {
             files[i] = new SevenZArchiveEntry();
         }
         BitSet isEmptyStream = null;
-        BitSet isEmptyFile = null; 
+        BitSet isEmptyFile = null;
         BitSet isAnti = null;
         while (true) {
             final int propertyType = getUnsignedByte(header);
@@ -830,7 +893,7 @@ public class SevenZFile implements Closeable {
         streamMap.packStreamOffsets = new long[numPackSizes];
         for (int i = 0; i < numPackSizes; i++) {
             streamMap.packStreamOffsets[i] = nextPackStreamOffset;
-            nextPackStreamOffset += archive.packSizes[i]; 
+            nextPackStreamOffset += archive.packSizes[i];
         }
 
         streamMap.folderFirstFileIndex = new int[numFolders];
@@ -911,10 +974,33 @@ public class SevenZFile implements Closeable {
     private InputStream buildDecoderStack(final Folder folder, final long folderOffset,
                 final int firstPackStreamIndex, final SevenZArchiveEntry entry) throws IOException {
         channel.seek(folderOffset);
-        InputStream inputStreamStack =
-            new BufferedInputStream(
+        InputStream inputStreamStack = new FilterInputStream(new BufferedInputStream(
               new BoundedSeekableByteChannelInputStream(channel,
-                  archive.packSizes[firstPackStreamIndex]));
+                  archive.packSizes[firstPackStreamIndex]))) {
+            @Override
+            public int read() throws IOException {
+                final int r = in.read();
+                if (r >= 0) {
+                    count(1);
+                }
+                return r;
+            }
+            @Override
+            public int read(final byte[] b) throws IOException {
+                return read(b, 0, b.length);
+            }
+            @Override
+            public int read(final byte[] b, final int off, final int len) throws IOException {
+                final int r = in.read(b, off, len);
+                if (r >= 0) {
+                    count(r);
+                }
+                return r;
+            }
+            private void count(int c) {
+                compressedBytesReadFromCurrentEntry += c;
+            }
+        };
         final LinkedList<SevenZMethodConfiguration> methods = new LinkedList<>();
         for (final Coder coder : folder.getOrderedCoders()) {
             if (coder.numInStreams != 1 || coder.numOutStreams != 1) {
@@ -936,13 +1022,17 @@ public class SevenZFile implements Closeable {
 
     /**
      * Reads a byte of data.
-     * 
+     *
      * @return the byte read, or -1 if end of input is reached
      * @throws IOException
      *             if an I/O error has occurred
      */
     public int read() throws IOException {
-        return getCurrentStream().read();
+        int b = getCurrentStream().read();
+        if (b >= 0) {
+            uncompressedBytesReadFromCurrentEntry++;
+        }
+        return b;
     }
 
     private InputStream getCurrentStream() throws IOException {
@@ -960,6 +1050,7 @@ public class SevenZFile implements Closeable {
             try (final InputStream stream = deferredBlockStreams.remove(0)) {
                 IOUtils.skip(stream, Long.MAX_VALUE);
             }
+            compressedBytesReadFromCurrentEntry = 0;
         }
 
         return deferredBlockStreams.get(0);
@@ -967,7 +1058,7 @@ public class SevenZFile implements Closeable {
 
     /**
      * Reads data into an array of bytes.
-     * 
+     *
      * @param b the array to write data to
      * @return the number of bytes read, or -1 if end of input is reached
      * @throws IOException
@@ -979,7 +1070,7 @@ public class SevenZFile implements Closeable {
 
     /**
      * Reads data into an array of bytes.
-     * 
+     *
      * @param b the array to write data to
      * @param off offset into the buffer to start filling at
      * @param len of bytes to read
@@ -988,7 +1079,30 @@ public class SevenZFile implements Closeable {
      *             if an I/O error has occurred
      */
     public int read(final byte[] b, final int off, final int len) throws IOException {
-        return getCurrentStream().read(b, off, len);
+        int cnt = getCurrentStream().read(b, off, len);
+        if (cnt > 0) {
+            uncompressedBytesReadFromCurrentEntry += cnt;
+        }
+        return cnt;
+    }
+
+    /**
+     * Provides statistics for bytes read from the current entry.
+     *
+     * @return statistics for bytes read from the current entry
+     * @since 1.17
+     */
+    public InputStreamStatistics getStatisticsForCurrentEntry() {
+        return new InputStreamStatistics() {
+            @Override
+            public long getCompressedCount() {
+                return compressedBytesReadFromCurrentEntry;
+            }
+            @Override
+            public long getUncompressedCount() {
+                return uncompressedBytesReadFromCurrentEntry;
+            }
+        };
     }
 
     private static long readUint64(final ByteBuffer in) throws IOException {
@@ -1056,5 +1170,20 @@ public class SevenZFile implements Closeable {
     @Override
     public String toString() {
       return archive.toString();
+    }
+
+    private static final CharsetEncoder PASSWORD_ENCODER = StandardCharsets.UTF_16LE.newEncoder();
+
+    private static byte[] utf16Decode(char[] chars) throws IOException {
+        if (chars == null) {
+            return null;
+        }
+        ByteBuffer encoded = PASSWORD_ENCODER.encode(CharBuffer.wrap(chars));
+        if (encoded.hasArray()) {
+            return encoded.array();
+        }
+        byte[] e = new byte[encoded.remaining()];
+        encoded.get(e);
+        return e;
     }
 }

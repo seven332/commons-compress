@@ -34,7 +34,7 @@ import static org.apache.commons.compress.archivers.zip.ZipConstants.WORD;
  * <p>The implementation relies on data being read from the local file
  * header and assumes that both size values are always present.</p>
  *
- * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">PKWARE
+ * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">PKWARE
  * APPNOTE.TXT, section 4.5.3</a>
  *
  * @since 1.2
@@ -144,7 +144,7 @@ public class Zip64ExtendedInformationExtraField implements ZipExtraField {
         }
         if (diskStart != null) {
             System.arraycopy(diskStart.getBytes(), 0, data, off, WORD);
-            off += WORD;
+            off += WORD; // NOSONAR - assignment as documentation
         }
         return data;
     }
@@ -174,8 +174,8 @@ public class Zip64ExtendedInformationExtraField implements ZipExtraField {
         }
         if (remaining >= WORD) {
             diskStart = new ZipLong(buffer, offset);
-            offset += WORD;
-            remaining -= WORD;
+            offset += WORD; // NOSONAR - assignment as documentation
+            remaining -= WORD; // NOSONAR - assignment as documentation
         }
     }
 
@@ -256,7 +256,7 @@ public class Zip64ExtendedInformationExtraField implements ZipExtraField {
             }
             if (hasDiskStart) {
                 diskStart = new ZipLong(rawCentralDirectoryData, offset);
-                offset += WORD;
+                offset += WORD; // NOSONAR - assignment as documentation
             }
         }
     }

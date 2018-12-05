@@ -132,6 +132,11 @@ public class SevenZFileTest extends AbstractTestCase {
     }
 
     @Test
+    public void test7zDeflate64Unarchive() throws Exception {
+        test7zUnarchive(getFile("bla.deflate64.7z"), SevenZMethod.DEFLATE64);
+    }
+
+    @Test
     public void test7zDecryptUnarchive() throws Exception {
         if (isStrongCryptoAvailable()) {
             test7zUnarchive(getFile("bla.encrypted.7z"), SevenZMethod.LZMA, // stack LZMA + AES
@@ -139,8 +144,16 @@ public class SevenZFileTest extends AbstractTestCase {
         }
     }
 
+    @Test
+    public void test7zDecryptUnarchiveUsingCharArrayPassword() throws Exception {
+        if (isStrongCryptoAvailable()) {
+            test7zUnarchive(getFile("bla.encrypted.7z"), SevenZMethod.LZMA, // stack LZMA + AES
+                            "foo".toCharArray());
+        }
+    }
+
     private void test7zUnarchive(final File f, final SevenZMethod m) throws Exception {
-        test7zUnarchive(f, m, null);
+        test7zUnarchive(f, m, (char[]) null);
     }
 
     @Test
@@ -280,25 +293,35 @@ public class SevenZFileTest extends AbstractTestCase {
             assertEquals(5, entries);
         }
     }
-    
+
     private void test7zUnarchive(final File f, final SevenZMethod m, final byte[] password) throws Exception {
         try (SevenZFile sevenZFile = new SevenZFile(f, password)) {
-            SevenZArchiveEntry entry = sevenZFile.getNextEntry();
-            assertEquals("test1.xml", entry.getName());
-            assertEquals(m, entry.getContentMethods().iterator().next().getMethod());
-            entry = sevenZFile.getNextEntry();
-            assertEquals("test2.xml", entry.getName());
-            assertEquals(m, entry.getContentMethods().iterator().next().getMethod());
-            final byte[] contents = new byte[(int) entry.getSize()];
-            int off = 0;
-            while ((off < contents.length)) {
-                final int bytesRead = sevenZFile.read(contents, off, contents.length - off);
-                assert (bytesRead >= 0);
-                off += bytesRead;
-            }
-            assertEquals(TEST2_CONTENT, new String(contents, "UTF-8"));
-            assertNull(sevenZFile.getNextEntry());
+            test7zUnarchive(sevenZFile, m);
         }
+    }
+
+    private void test7zUnarchive(final File f, final SevenZMethod m, final char[] password) throws Exception {
+        try (SevenZFile sevenZFile = new SevenZFile(f, password)) {
+            test7zUnarchive(sevenZFile, m);
+        }
+    }
+
+    private void test7zUnarchive(SevenZFile sevenZFile, final SevenZMethod m) throws Exception {
+        SevenZArchiveEntry entry = sevenZFile.getNextEntry();
+        assertEquals("test1.xml", entry.getName());
+        assertEquals(m, entry.getContentMethods().iterator().next().getMethod());
+        entry = sevenZFile.getNextEntry();
+        assertEquals("test2.xml", entry.getName());
+        assertEquals(m, entry.getContentMethods().iterator().next().getMethod());
+        final byte[] contents = new byte[(int) entry.getSize()];
+        int off = 0;
+        while ((off < contents.length)) {
+            final int bytesRead = sevenZFile.read(contents, off, contents.length - off);
+            assert (bytesRead >= 0);
+            off += bytesRead;
+        }
+        assertEquals(TEST2_CONTENT, new String(contents, "UTF-8"));
+        assertNull(sevenZFile.getNextEntry());
     }
 
     private void checkHelloWorld(final String filename) throws Exception {

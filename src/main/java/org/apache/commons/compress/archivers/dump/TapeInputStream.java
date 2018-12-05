@@ -107,7 +107,7 @@ class TapeInputStream extends FilterInputStream {
     /**
      * {@inheritDoc}
      *
-     * <p>reads the full given length unless EOF is reached.</p> 
+     * <p>reads the full given length unless EOF is reached.</p>
      *
      * @param len length to read, must be a multiple of the stream's
      * record size
@@ -129,7 +129,7 @@ class TapeInputStream extends FilterInputStream {
             if (readOffset == blockSize) {
                 try {
                     readBlock(true);
-                } catch (ShortFileException sfe) {
+                } catch (ShortFileException sfe) { // NOSONAR
                     return -1;
                 }
             }
@@ -157,7 +157,7 @@ class TapeInputStream extends FilterInputStream {
     /**
      * Skip bytes. Same as read but without the arraycopy.
      *
-     * <p>skips the full given length unless EOF is reached.</p> 
+     * <p>skips the full given length unless EOF is reached.</p>
      *
      * @param len length to read, must be a multiple of the stream's
      * record size
@@ -180,7 +180,7 @@ class TapeInputStream extends FilterInputStream {
             if (readOffset == blockSize) {
                 try {
                     readBlock((len - bytes) < blockSize);
-                } catch (ShortFileException sfe) {
+                } catch (ShortFileException sfe) { // NOSONAR
                     return -1;
                 }
             }
@@ -228,7 +228,7 @@ class TapeInputStream extends FilterInputStream {
         if (readOffset == blockSize) {
             try {
                 readBlock(true);
-            } catch (ShortFileException sfe) {
+            } catch (ShortFileException sfe) { // NOSONAR
                 return null;
             }
         }

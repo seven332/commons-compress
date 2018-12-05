@@ -29,9 +29,9 @@ import org.apache.commons.compress.utils.IOUtils;
 
 /**
  * Implements the "ar" archive format as an input stream.
- * 
+ *
  * @NotThreadSafe
- * 
+ *
  */
 public class ArArchiveInputStream extends ArchiveInputStream {
 
@@ -54,16 +54,27 @@ public class ArArchiveInputStream extends ArchiveInputStream {
      */
     private long entryOffset = -1;
 
-    // cached buffers - must only be used locally in the class (COMPRESS-172 - reduce garbage collection)
-    private final byte[] nameBuf = new byte[16];
-    private final byte[] lastModifiedBuf = new byte[12];
-    private final byte[] idBuf = new byte[6];
-    private final byte[] fileModeBuf = new byte[8];
-    private final byte[] lengthBuf = new byte[10];
+    // offsets and length of meta data parts
+    private static final int NAME_OFFSET = 0;
+    private static final int NAME_LEN = 16;
+    private static final int LAST_MODIFIED_OFFSET = NAME_LEN;
+    private static final int LAST_MODIFIED_LEN = 12;
+    private static final int USER_ID_OFFSET = LAST_MODIFIED_OFFSET + LAST_MODIFIED_LEN;
+    private static final int USER_ID_LEN = 6;
+    private static final int GROUP_ID_OFFSET = USER_ID_OFFSET + USER_ID_LEN;
+    private static final int GROUP_ID_LEN = 6;
+    private static final int FILE_MODE_OFFSET = GROUP_ID_OFFSET + GROUP_ID_LEN;
+    private static final int FILE_MODE_LEN = 8;
+    private static final int LENGTH_OFFSET = FILE_MODE_OFFSET + FILE_MODE_LEN;
+    private static final int LENGTH_LEN = 10;
+
+    // cached buffer for meta data - must only be used locally in the class (COMPRESS-172 - reduce garbage collection)
+    private final byte[] metaData =
+        new byte[NAME_LEN + LAST_MODIFIED_LEN + USER_ID_LEN + GROUP_ID_LEN + FILE_MODE_LEN + LENGTH_LEN];
 
     /**
      * Constructs an Ar input stream with the referenced stream
-     * 
+     *
      * @param pInput
      *            the ar input stream
      */
@@ -74,7 +85,7 @@ public class ArArchiveInputStream extends ArchiveInputStream {
 
     /**
      * Returns the next AR entry in this stream.
-     * 
+     *
      * @return the next AR entry.
      * @throws IOException
      *             if the entry could not be read
@@ -82,14 +93,16 @@ public class ArArchiveInputStream extends ArchiveInputStream {
     public ArArchiveEntry getNextArEntry() throws IOException {
         if (currentEntry != null) {
             final long entryEnd = entryOffset + currentEntry.getLength();
-            IOUtils.skip(this, entryEnd - offset);
+            long skipped = IOUtils.skip(input, entryEnd - offset);
+            trackReadBytes(skipped);
             currentEntry = null;
         }
 
         if (offset == 0) {
             final byte[] expected = ArchiveUtils.toAsciiBytes(ArArchiveEntry.HEADER);
             final byte[] realized = new byte[expected.length];
-            final int read = IOUtils.readFully(this, realized);
+            final int read = IOUtils.readFully(input, realized);
+            trackReadBytes(read);
             if (read != expected.length) {
                 throw new IOException("failed to read header. Occured at byte: " + getBytesRead());
             }
@@ -100,27 +113,31 @@ public class ArArchiveInputStream extends ArchiveInputStream {
             }
         }
 
-        if (offset % 2 != 0 && read() < 0) {
-            // hit eof
-            return null;
+        if (offset % 2 != 0) {
+            if (input.read() < 0) {
+                // hit eof
+                return null;
+            }
+            trackReadBytes(1);
         }
 
         if (input.available() == 0) {
             return null;
         }
 
-        IOUtils.readFully(this, nameBuf);
-        IOUtils.readFully(this, lastModifiedBuf);
-        IOUtils.readFully(this, idBuf);
-        final int userId = asInt(idBuf, true);
-        IOUtils.readFully(this, idBuf);
-        IOUtils.readFully(this, fileModeBuf);
-        IOUtils.readFully(this, lengthBuf);
+        {
+            final int read = IOUtils.readFully(input, metaData);
+            trackReadBytes(read);
+            if (read < metaData.length) {
+                throw new IOException("truncated ar archive");
+            }
+        }
 
         {
             final byte[] expected = ArchiveUtils.toAsciiBytes(ArArchiveEntry.TRAILER);
             final byte[] realized = new byte[expected.length];
-            final int read = IOUtils.readFully(this, realized);
+            final int read = IOUtils.readFully(input, realized);
+            trackReadBytes(read);
             if (read != expected.length) {
                 throw new IOException("failed to read entry trailer. Occured at byte: " + getBytesRead());
             }
@@ -136,13 +153,13 @@ public class ArArchiveInputStream extends ArchiveInputStream {
 //        GNU ar uses a '/' to mark the end of the filename; this allows for the use of spaces without the use of an extended filename.
 
         // entry name is stored as ASCII string
-        String temp = ArchiveUtils.toAsciiString(nameBuf).trim();
+        String temp = ArchiveUtils.toAsciiString(metaData, NAME_OFFSET, NAME_LEN).trim();
         if (isGNUStringTable(temp)) { // GNU extended filenames entry
-            currentEntry = readGNUStringTable(lengthBuf);
+            currentEntry = readGNUStringTable(metaData, LENGTH_OFFSET, LENGTH_LEN);
             return getNextArEntry();
         }
 
-        long len = asLong(lengthBuf);
+        long len = asLong(metaData, LENGTH_OFFSET, LENGTH_LEN);
         if (temp.endsWith("/")) { // GNU terminator
             temp = temp.substring(0, temp.length() - 1);
         } else if (isGNULongName(temp)) {
@@ -158,16 +175,17 @@ public class ArArchiveInputStream extends ArchiveInputStream {
             entryOffset += nameLen;
         }
 
-        currentEntry = new ArArchiveEntry(temp, len, userId,
-                                          asInt(idBuf, true),
-                                          asInt(fileModeBuf, 8),
-                                          asLong(lastModifiedBuf));
+        currentEntry = new ArArchiveEntry(temp, len,
+                                          asInt(metaData, USER_ID_OFFSET, USER_ID_LEN, true),
+                                          asInt(metaData, GROUP_ID_OFFSET, GROUP_ID_LEN, true),
+                                          asInt(metaData, FILE_MODE_OFFSET, FILE_MODE_LEN, 8),
+                                          asLong(metaData, LAST_MODIFIED_OFFSET, LAST_MODIFIED_LEN));
         return currentEntry;
     }
 
     /**
      * Get an extended name from the GNU extended name buffer.
-     * 
+     *
      * @param offset pointer to entry within the buffer
      * @return the extended file name; without trailing "/" if present.
      * @throws IOException if name not found or buffer not set up
@@ -187,24 +205,24 @@ public class ArArchiveInputStream extends ArchiveInputStream {
         throw new IOException("Failed to read entry: " + offset);
     }
 
-    private long asLong(final byte[] byteArray) {
-        return Long.parseLong(ArchiveUtils.toAsciiString(byteArray).trim());
+    private long asLong(final byte[] byteArray, int offset, int len) {
+        return Long.parseLong(ArchiveUtils.toAsciiString(byteArray, offset, len).trim());
     }
 
-    private int asInt(final byte[] byteArray) {
-        return asInt(byteArray, 10, false);
+    private int asInt(final byte[] byteArray, int offset, int len) {
+        return asInt(byteArray, offset, len, 10, false);
     }
 
-    private int asInt(final byte[] byteArray, final boolean treatBlankAsZero) {
-        return asInt(byteArray, 10, treatBlankAsZero);
+    private int asInt(final byte[] byteArray, int offset, int len, final boolean treatBlankAsZero) {
+        return asInt(byteArray, offset, len, 10, treatBlankAsZero);
     }
 
-    private int asInt(final byte[] byteArray, final int base) {
-        return asInt(byteArray, base, false);
+    private int asInt(final byte[] byteArray, int offset, int len, final int base) {
+        return asInt(byteArray, offset, len, base, false);
     }
 
-    private int asInt(final byte[] byteArray, final int base, final boolean treatBlankAsZero) {
-        final String string = ArchiveUtils.toAsciiString(byteArray).trim();
+    private int asInt(final byte[] byteArray, int offset, int len, final int base, final boolean treatBlankAsZero) {
+        final String string = ArchiveUtils.toAsciiString(byteArray, offset, len).trim();
         if (string.length() == 0 && treatBlankAsZero) {
             return 0;
         }
@@ -213,7 +231,7 @@ public class ArArchiveInputStream extends ArchiveInputStream {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.apache.commons.compress.archivers.ArchiveInputStream#getNextEntry()
      */
@@ -224,7 +242,7 @@ public class ArArchiveInputStream extends ArchiveInputStream {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see java.io.InputStream#close()
      */
     @Override
@@ -238,30 +256,30 @@ public class ArArchiveInputStream extends ArchiveInputStream {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see java.io.InputStream#read(byte[], int, int)
      */
     @Override
     public int read(final byte[] b, final int off, final int len) throws IOException {
+        if (currentEntry == null) {
+            throw new IllegalStateException("No current ar entry");
+        }
         int toRead = len;
-        if (currentEntry != null) {
-            final long entryEnd = entryOffset + currentEntry.getLength();
-            if (len > 0 && entryEnd > offset) {
-                toRead = (int) Math.min(len, entryEnd - offset);
-            } else {
-                return -1;
-            }
+        final long entryEnd = entryOffset + currentEntry.getLength();
+        if (len > 0 && entryEnd > offset) {
+            toRead = (int) Math.min(len, entryEnd - offset);
+        } else {
+            return -1;
         }
         final int ret = this.input.read(b, off, toRead);
-        count(ret);
-        offset += ret > 0 ? ret : 0;
+        trackReadBytes(ret);
         return ret;
     }
 
     /**
      * Checks if the signature matches ASCII "!&lt;arch&gt;" followed by a single LF
      * control character
-     * 
+     *
      * @param signature
      *            the bytes to check
      * @param length
@@ -271,35 +289,11 @@ public class ArArchiveInputStream extends ArchiveInputStream {
     public static boolean matches(final byte[] signature, final int length) {
         // 3c21 7261 6863 0a3e
 
-        if (length < 8) {
-            return false;
-        }
-        if (signature[0] != 0x21) {
-            return false;
-        }
-        if (signature[1] != 0x3c) {
-            return false;
-        }
-        if (signature[2] != 0x61) {
-            return false;
-        }
-        if (signature[3] != 0x72) {
-            return false;
-        }
-        if (signature[4] != 0x63) {
-            return false;
-        }
-        if (signature[5] != 0x68) {
-            return false;
-        }
-        if (signature[6] != 0x3e) {
-            return false;
-        }
-        if (signature[7] != 0x0a) {
-            return false;
-        }
-
-        return true;
+        return length >= 8 && signature[0] == 0x21 &&
+                signature[1] == 0x3c && signature[2] == 0x61 &&
+                signature[3] == 0x72 && signature[4] == 0x63 &&
+                signature[5] == 0x68 && signature[6] == 0x3e &&
+                signature[7] == 0x0a;
     }
 
     static final String BSD_LONGNAME_PREFIX = "#1/";
@@ -346,7 +340,8 @@ public class ArArchiveInputStream extends ArchiveInputStream {
         final int nameLen =
             Integer.parseInt(bsdLongName.substring(BSD_LONGNAME_PREFIX_LEN));
         final byte[] name = new byte[nameLen];
-        final int read = IOUtils.readFully(this, name);
+        final int read = IOUtils.readFully(input, name);
+        trackReadBytes(read);
         if (read != nameLen) {
             throw new EOFException();
         }
@@ -366,7 +361,7 @@ public class ArArchiveInputStream extends ArchiveInputStream {
      * <p>A header references an extended filename by storing a "/"
      * followed by a decimal offset to the start of the filename in
      * the extended filename data section.</p>
-     * 
+     *
      * <p>The format of the "//" file itself is simply a list of the
      * long filenames, each separated by one or more LF
      * characters. Note that the decimal offsets are number of
@@ -376,15 +371,23 @@ public class ArArchiveInputStream extends ArchiveInputStream {
         return GNU_STRING_TABLE_NAME.equals(name);
     }
 
+    private void trackReadBytes(final long read) {
+        count(read);
+        if (read > 0) {
+            offset += read;
+        }
+    }
+
     /**
      * Reads the GNU archive String Table.
      *
      * @see #isGNUStringTable
      */
-    private ArArchiveEntry readGNUStringTable(final byte[] length) throws IOException {
-        final int bufflen = asInt(length); // Assume length will fit in an int
+    private ArArchiveEntry readGNUStringTable(final byte[] length, final int offset, final int len) throws IOException {
+        final int bufflen = asInt(length, offset, len); // Assume length will fit in an int
         namebuffer = new byte[bufflen];
-        final int read = IOUtils.readFully(this, namebuffer, 0, bufflen);
+        final int read = IOUtils.readFully(input, namebuffer, 0, bufflen);
+        trackReadBytes(read);
         if (read != bufflen){
             throw new IOException("Failed to read complete // record: expected="
                                   + bufflen + " read=" + read);

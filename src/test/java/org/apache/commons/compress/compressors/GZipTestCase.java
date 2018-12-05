@@ -145,7 +145,7 @@ public final class GZipTestCase extends AbstractTestCase {
         try (FileInputStream fis = new FileInputStream(getFile("test3.xml"))) {
             content = IOUtils.toByteArray(fis);
         }
-        
+
         final ByteArrayOutputStream bout = new ByteArrayOutputStream();
 
         final GzipParameters parameters = new GzipParameters();
@@ -171,7 +171,7 @@ public final class GZipTestCase extends AbstractTestCase {
         try (FileInputStream fis = new FileInputStream(getFile("test3.xml"))) {
             content = IOUtils.toByteArray(fis);
         }
-        
+
         final ByteArrayOutputStream bout = new ByteArrayOutputStream();
 
         final GzipParameters parameters = new GzipParameters();
@@ -200,7 +200,7 @@ public final class GZipTestCase extends AbstractTestCase {
         } catch (final IllegalArgumentException e) {
             // expected
         }
-        
+
         try {
             parameters.setCompressionLevel(-5);
             fail("IllegalArgumentException not thrown");
@@ -214,16 +214,16 @@ public final class GZipTestCase extends AbstractTestCase {
         try (FileInputStream fis = new FileInputStream(getFile("test3.xml"))) {
             content = IOUtils.toByteArray(fis);
         }
-        
+
         final ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        
+
         final GzipParameters parameters = new GzipParameters();
         parameters.setCompressionLevel(compressionLevel);
         final GzipCompressorOutputStream out = new GzipCompressorOutputStream(bout, parameters);
         IOUtils.copy(new ByteArrayInputStream(content), out);
         out.flush();
         out.close();
-        
+
         assertEquals("extra flags (XFL)", flag, bout.toByteArray()[8]);
     }
 
@@ -241,7 +241,7 @@ public final class GZipTestCase extends AbstractTestCase {
     public void testExtraFlagsDefaultCompression() throws Exception {
         testExtraFlags(Deflater.DEFAULT_COMPRESSION, 0);
     }
-    
+
     @Test
     public void testOverWrite() throws Exception {
         final GzipCompressorOutputStream out = new GzipCompressorOutputStream(new ByteArrayOutputStream());
@@ -257,7 +257,7 @@ public final class GZipTestCase extends AbstractTestCase {
     @Test
     public void testMetadataRoundTrip() throws Exception {
         final ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                
+
         final GzipParameters parameters = new GzipParameters();
         parameters.setCompressionLevel(Deflater.BEST_COMPRESSION);
         parameters.setModificationTime(123456000);
@@ -268,7 +268,7 @@ public final class GZipTestCase extends AbstractTestCase {
                 ".xml"))) {
             IOUtils.copy(fis, out);
         }
-        
+
         final GzipCompressorInputStream input =
             new GzipCompressorInputStream(new ByteArrayInputStream(bout.toByteArray()));
         input.close();
@@ -278,5 +278,32 @@ public final class GZipTestCase extends AbstractTestCase {
         assertEquals(13, readParams.getOperatingSystem());
         assertEquals("test3.xml", readParams.getFilename());
         assertEquals("Umlaute möglich?", readParams.getComment());
+    }
+
+    @Test
+    public void singleByteReadConsistentlyReturnsMinusOneAtEof() throws IOException {
+        final File input = getFile("bla.tgz");
+        try (InputStream is = new FileInputStream(input)) {
+            final GzipCompressorInputStream in =
+                    new GzipCompressorInputStream(is);
+            IOUtils.toByteArray(in);
+            Assert.assertEquals(-1, in.read());
+            Assert.assertEquals(-1, in.read());
+            in.close();
+        }
+    }
+
+    @Test
+    public void multiByteReadConsistentlyReturnsMinusOneAtEof() throws IOException {
+        final File input = getFile("bla.tgz");
+        byte[] buf = new byte[2];
+        try (InputStream is = new FileInputStream(input)) {
+            final GzipCompressorInputStream in =
+                    new GzipCompressorInputStream(is);
+            IOUtils.toByteArray(in);
+            Assert.assertEquals(-1, in.read(buf));
+            Assert.assertEquals(-1, in.read(buf));
+            in.close();
+        }
     }
 }

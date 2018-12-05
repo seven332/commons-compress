@@ -42,7 +42,275 @@ The <action> type attribute can be add,update,fix,remove.
     <title>commons-compress</title>
   </properties>
   <body>
-    <release version="1.14" date="not released, yet"
+    <release version="1.18" date="not released, yet"
+             description="Release 1.18">
+      <action type="fix" date="2018-06-15" due-to="DidierLoiseau">
+        The example Expander class has been vulnerable to a path
+        traversal in the edge case that happens when the target
+        directory has a sibling directory and the name of the target
+        directory is a prefix of the sibling directory's name.
+      </action>
+      <action issue="COMPRESS-456" type="fix" date="2018-06-19">
+        Changed the OSGi Import-Package to also optionally import
+        javax.crypto so encrypted archives can be read.
+      </action>
+      <action issue="COMPRESS-457" type="fix" date="2018-07-01">
+        Changed various implementations of the close method to better
+        ensure all held resources get closed even if exceptions are
+        thrown during the closing the stream.
+      </action>
+      <action issue="COMPRESS-455" type="fix" date="2018-07-01">
+        ZipArchiveInputStream can now detect the APK Signing Block
+        used in signed Android APK files and treats it as an "end of
+        archive" marker.
+      </action>
+      <action issue="COMPRESS-459" type="fix" date="2018-07-11"
+              due-to="Jens Reimann">
+        The cpio streams didn't handle archives using a multi-byte
+        encoding properly.
+      </action>
+      <action issue="COMPRESS-460" type="add" date="2018-07-28"
+              due-to="Carmi Grushko">
+        It is now possible to specify the arguments of zstd-jni's
+        ZstdOutputStream constructors via Commons Compress as well.
+      </action>
+      <action issue="COMPRESS-463" type="fix" date="2018-08-09">
+        ZipArchiveInputStream#read would silently return -1 on a
+        corrupted stored entry and even return > 0 after hitting the
+        end of the archive.
+      </action>
+      <action issue="COMPRESS-462" type="fix" date="2018-08-10">
+        ArArchiveInputStream#read would allow to read from the stream
+        without opening an entry at all.
+      </action>
+    </release>
+    <release version="1.17" date="2018-06-03"
+             description="Release 1.17">
+      <action type="fix" date="2018-02-06">
+        Removed the objenesis dependency from the pom as it is not
+        needed at all.
+      </action>
+      <action issue="COMPRESS-446" type="fix" date="2018-03-29">
+        Fixed resource leak in ParallelScatterZipCreator#writeTo.
+      </action>
+      <action type="update" date="2018-04-01" due-to="Marchenko Sergey">
+        Fixed some code examples.
+        Github Pull Request #63.
+      </action>
+      <action issue="COMPRESS-447" type="fix" date="2018-04-22">
+        Certain errors when parsing ZIP extra fields in corrupt
+        archives are now turned into ZipException, they used to
+        manifest as ArrayIndexOutOfBoundsException before.
+      </action>
+      <action issue="COMPRESS-445" type="update" date="2018-04-22"
+              due-to="Andreas Beeker">
+        The streams returned by ZipFile and most other decompressing
+        streams now provide information about the number of compressed
+        and uncompressed bytes read so far. This may be used to detect
+        a ZipBomb if the compression ratio exceeds a certain
+        threshold, for example.
+        For SevenZFile a new method returns the statistics for the
+        current entry.
+      </action>
+      <action issue="COMPRESS-443" type="add" date="2018-04-25">
+        Added a unit test that is supposed to fail if we break the
+        OSGi manifest entries again.
+      </action>
+      <action issue="COMPRESS-449" type="add" date="2018-05-02">
+        Add a new SkipShieldingInputStream class that can be used with
+        streams that throw an IOException when skip is invoked.
+      </action>
+      <action issue="COMPRESS-451" type="fix" date="2018-05-04">
+        IOUtils.copy now verifies the buffer size is bigger than 0.
+      </action>
+      <action issue="COMPRESS-452" type="add" date="2018-05-09">
+        New constructors have been added to SevenZFile that accept
+        char[]s rather than byte[]s in order to avoid a common error
+        of using the wrong encoding when creating the byte[].  This
+        change may break source compatibility for client code that
+        uses one of the constructors expecting a password and passes
+        in null as password. We recommend to change the code to use a
+        constructor without password argument.
+      </action>
+      <action issue="COMPRESS-453" type="update" date="2018-05-24">
+        Added a workaround for a bug in AdoptOpenJDK for S/390 to
+        BZip2CompressorInputStream.
+      </action>
+      <action issue="COMPRESS-454" type="fix" date="2018-05-30">
+        ZipArchiveInputStream failed to read some files with stored
+        entries using a data descriptor.
+      </action>
+    </release>
+    <release version="1.16.1" date="2018-02-10"
+             description="Release 1.16.1">
+      <action issue="COMPRESS-442" type="fix" date="2018-02-06">
+        Fixed the OSGi manifest entry for imports that has been broken
+        in 1.16.
+      </action>
+    </release>
+    <release version="1.16" date="2018-02-05"
+             description="Release 1.16">
+      <action issue="COMPRESS-423" type="add" date="2017-10-17"
+              due-to="Andre F de Miranda">
+        Add read-only support for Zstandard compression based on the
+        Zstd-jni project.
+      </action>
+      <action issue="COMPRESS-425" type="add" date="2017-10-22">
+        Added auto-detection for Zstandard compressed streams.
+      </action>
+      <action issue="COMPRESS-430" type="fix" date="2017-11-25"
+              due-to="Bruno P. Kinoshita">
+        Synchronized iteration over a synchronizedList in ParallelScatterZipCreator.
+      </action>
+      <action issue="COMPRESS-432" type="fix" date="2017-12-22">
+        ZipFile could get stuck in an infinite loop when parsing ZIP
+        archives with certain strong encryption headers.
+      </action>
+      <action issue="COMPRESS-435" type="update" date="2017-12-27"
+              due-to="BELUGA BEHR">
+        Replaces instanceof checks with a type marker in LZ77 support code.
+      </action>
+      <action issue="COMPRESS-426" type="add" date="2017-12-28">
+        Added write-support for Zstandard compression.
+      </action>
+      <action issue="COMPRESS-424" type="fix" date="2017-12-30">
+        Added improved checks to detect corrupted bzip2 streams and
+        throw the expected IOException rather than obscure
+        RuntimeExceptions.
+      </action>
+      <action type="update" date="2018-01-04">
+        Updated XZ for Java dependency to 1.8 in order to pick up bug
+        fix to LZMA2InputStream's available method.
+      </action>
+      <action type="update" date="2018-01-05" issue="COMPRESS-429"
+              due-to="Damiano Albani">
+        ZipArchiveEntry now exposes how the name or comment have been
+        determined when the entry was read.
+      </action>
+      <action issue="COMPRESS-380" type="add" date="2018-01-09"
+              due-to="Christian Marquez Grabia">
+        Added read-only DEFLATE64 support to ZIP archives and as
+        stand-alone CompressorInputStream.
+      </action>
+      <action issue="COMPRESS-438" type="update" date="2018-01-10">
+        ZipFile.getInputStream will now always buffer the stream
+        internally in order to improve read performance.
+      </action>
+      <action issue="COMPRESS-440" type="update" date="2018-01-12"
+              due-to="Dawid Weiss">
+        Speed improvement for DEFLATE64 decompression.
+      </action>
+      <action issue="COMPRESS-437" type="add" date="2018-01-13">
+        Added read-only DEFLATE64 support to 7z archives.
+      </action>
+      <action issue="COMPRESS-436" type="update" date="2018-01-14">
+        Added a few extra sanity checks for the rarer compression
+        methods used in ZIP archives.
+      </action>
+      <action issue="COMPRESS-441" type="update" date="2018-01-14">
+        Simplified the special handling for the dummy byte required by
+        zlib when using java.util.zip.Inflater.
+      </action>
+      <action type="update" date="2018-01-18" due-to="Shahab Kondri">
+        Various code cleanups.
+        Github Pull Request #61.
+      </action>
+      <action type="update" date="2018-01-29">
+        TarArchiveEntry's preserveLeadingSlashes constructor argument
+        has been renamed and can now also be used to preserve the
+        drive letter on Windows.
+      </action>
+    </release>
+    <release version="1.15" date="2017-10-17"
+             description="Release 1.15
+----------------------------------------
+
+TarArchiveOutputStream now ensures record size is 512 and block size is
+a multiple of 512 as any other value would create invalid tar
+archives. This may break compatibility for code that deliberately
+wanted to create such files.">
+      <action issue="COMPRESS-394" type="fix" date="2017-05-22">
+        Make sure "version needed to extract" in local file header and
+        central directory of a ZIP archive agree with each other.
+        Also ensure the version is set to 2.0 if DEFLATE is used.
+      </action>
+      <action issue="COMPRESS-395" type="fix" date="2017-05-22">
+        Don't use a data descriptor in ZIP archives when copying a raw
+        entry that already knows its size and CRC information.
+      </action>
+      <action issue="COMPRESS-413" type="fix" date="2017-05-22" due-to="Simon Spero">
+        Travis build redundantly repeats compilation and tests redundantly #43.      
+      </action>
+      <action issue="COMPRESS-397" type="add" date="2017-05-22">
+        Added magic MANIFEST entry Automatic-Module-Name so the module
+        name will be org.apache.commons.compress when the jar is used
+        as an automatic module in Java9.
+      </action>
+      <action issue="COMPRESS-396" type="fix" date="2017-05-23">
+        The MANIFEST of 1.14 lacks an OSGi Import-Package for XZ for
+        Java.
+      </action>
+      <action issue="COMPRESS-406" type="fix" date="2017-06-12"
+              due-to="Simon Spero">
+        BUILDING.md now passes the RAT check.
+      </action>
+      <action issue="COMPRESS-405" type="add" date="2017-06-15"
+              due-to="Simon Spero ">
+        Added a new utility class FixedLengthBlockOutputStream that
+        can be used to ensure writing always happens in blocks of a
+        given size.
+      </action>
+      <action issue="COMPRESS-412" type="fix" date="2017-06-17"
+              due-to="Michael Hausegger">
+        Made sure ChecksumCalculatingInputStream receives valid
+        checksum and input stream instances via the constructor.
+      </action>
+      <action issue="COMPRESS-407" type="fix" date="2017-06-24"
+              due-to="Simon Spero ">
+        TarArchiveOutputStream now verifies the block and record sizes
+        specified at construction time are compatible with the tar
+        specification. In particular 512 is the only record size
+        accepted and the block size must be a multiple of 512.
+        At the same time the default block size in
+        TarArchiveOutputStream has been changed from 10240 to 512
+        bytes.
+      </action>
+      <action issue="COMPRESS-400" type="add" date="2017-06-26"
+              due-to="Simon Spero ">
+        It is now possible to specify/read custom PAX headers when
+        writing/reading tar archives.
+      </action>
+      <action issue="COMPRESS-415" type="fix" date="2017-06-27">
+        Fixed class names of CpioArchiveEntry and
+        CpioArchiveInputStream in various Javadocs.
+      </action>
+      <action issue="COMPRESS-416" type="fix" date="2017-07-04"
+              due-to="Simon Spero ">
+        The code of the extended timestamp zip extra field incorrectly
+        assumed the time was stored as unsigned 32-bit int and thus
+        created incorrect results for years after 2037.
+      </action>
+      <action issue="COMPRESS-410" type="fix" date="2017-07-05"
+              due-to="Simon Spero ">
+        Removed ZipEncoding code that became obsolete when we started
+        to require Java 5 as baseline long ago.
+      </action>
+      <action issue="COMPRESS-417" type="fix" date="2017-07-19">
+        The tar package will no longer try to parse the major and
+        minor device numbers unless the entry represents a character
+        or block special file.
+      </action>
+      <action issue="COMPRESS-421" type="fix" date="2017-10-06"
+              due-to="Roel Spilker">
+        When reading tar headers with name fields containing embedded
+        NULs, the name will now be terminated at the first NUL byte.
+      </action>
+      <action issue="COMPRESS-409" type="fix" date="2017-10-08">
+        Simplified TarArchiveOutputStream by replacing the internal
+        buffering with new class FixedLengthBlockOutputStream.
+      </action>
+    </release>
+    <release version="1.14" date="2017-05-14"
              description="Release 1.14">
       <action issue="COMPRESS-378" type="fix" date="2017-01-09">
         SnappyCompressorInputStream slides the window too early

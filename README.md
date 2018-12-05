@@ -43,21 +43,21 @@
 Apache Commons Compress
 ===================
 
-[![Build Status](https://travis-ci.org/apache/commons-compress.svg?branch=master)](https://travis-ci.org/apache/commons-compress)
-[![Coverage Status](https://coveralls.io/repos/apache/commons-compress/badge.svg?branch=master)](https://coveralls.io/r/apache/commons-compress)
+[![Build Status](https://travis-ci.org/apache/commons-compress.svg)](https://travis-ci.org/apache/commons-compress)
+[![Coverage Status](https://coveralls.io/repos/apache/commons-compress/badge.svg)](https://coveralls.io/r/apache/commons-compress)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.commons/commons-compress/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.apache.commons/commons-compress/)
-[![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![License](https://img.shields.io/:license-apache-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 
 Apache Commons Compress software defines an API for working with
 compression and archive formats.  These include: bzip2, gzip, pack200,
-lzma, xz, Snappy, traditional Unix Compress, DEFLATE, LZ4, Brotli and ar, cpio,
-jar, tar, zip, dump, 7z, arj.
+lzma, xz, Snappy, traditional Unix Compress, DEFLATE, DEFLATE64, LZ4,
+Brotli, Zstandard and ar, cpio, jar, tar, zip, dump, 7z, arj.
 
 Documentation
 -------------
 
 More information can be found on the [Apache Commons Compress homepage](https://commons.apache.org/proper/commons-compress).
-The [JavaDoc](https://commons.apache.org/proper/commons-compress/javadocs/api-release) can be browsed.
+The [Javadoc](https://commons.apache.org/proper/commons-compress/javadocs/api-release) can be browsed.
 Questions related to the usage of Apache Commons Compress should be posted to the [user mailing list][ml].
 
 Where can I get the latest release?
@@ -70,7 +70,7 @@ Alternatively you can pull it from the central Maven repositories:
 <dependency>
   <groupId>org.apache.commons</groupId>
   <artifactId>commons-compress</artifactId>
-  <version>1.13</version>
+  <version>1.18</version>
 </dependency>
 ```
 
@@ -101,7 +101,7 @@ Additional Resources
 --------------------
 
 + [Apache Commons Homepage](https://commons.apache.org/)
-+ [Apache Bugtracker (JIRA)](https://issues.apache.org/jira/browse/compress)
++ [Apache Issue Tracker (JIRA)](https://issues.apache.org/jira/browse/COMPRESS)
 + [Apache Commons Twitter Account](https://twitter.com/ApacheCommons)
 + `#apache-commons` IRC channel on `irc.freenode.org`
 

@@ -19,6 +19,9 @@
 
 package org.apache.commons.compress.archivers.zip;
 
+import org.apache.commons.compress.utils.CountingInputStream;
+import org.apache.commons.compress.utils.InputStreamStatistics;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -28,17 +31,17 @@ import java.io.InputStream;
  * method.
  * <p>
  * The algorithm is described in the ZIP File Format Specification.
- * 
- * @see <a href="http://www.pkware.com/documents/casestudies/APPNOTE.TXT">ZIP File Format Specification</a>
- * 
+ *
+ * @see <a href="https://www.pkware.com/documents/casestudies/APPNOTE.TXT">ZIP File Format Specification</a>
+ *
  * @author Emmanuel Bourg
  * @since 1.7
  */
-class ExplodingInputStream extends InputStream {
+class ExplodingInputStream extends InputStream implements InputStreamStatistics {
 
     /** The underlying stream containing the compressed data */
     private final InputStream in;
-    
+
     /** The stream of bits read from the input stream */
     private BitStream bits;
 
@@ -61,6 +64,10 @@ class ExplodingInputStream extends InputStream {
 
     /** Output buffer holding the decompressed data */
     private final CircularBuffer buffer = new CircularBuffer(32 * 1024);
+
+    private long uncompressedCount = 0;
+
+    private long treeSizes = 0;
 
     /**
      * Create a new stream decompressing the content of the specified stream
@@ -85,18 +92,26 @@ class ExplodingInputStream extends InputStream {
 
     /**
      * Reads the encoded binary trees and prepares the bit stream.
-     * 
+     *
      * @throws IOException
      */
     private void init() throws IOException {
         if (bits == null) {
-            if (numberOfTrees == 3) {
-                literalTree = BinaryTree.decode(in, 256);
+            try (CountingInputStream i = new CountingInputStream(in) {
+                    @Override
+                    public void close() {
+                        // we do not want to close in
+                    }
+                }) {
+                if (numberOfTrees == 3) {
+                    literalTree = BinaryTree.decode(i, 256);
+                }
+
+                lengthTree = BinaryTree.decode(i, 64);
+                distanceTree = BinaryTree.decode(i, 64);
+                treeSizes += i.getBytesRead();
             }
 
-            lengthTree = BinaryTree.decode(in, 64);
-            distanceTree = BinaryTree.decode(in, 64);
-            
             bits = new BitStream(in);
         }
     }
@@ -107,7 +122,35 @@ class ExplodingInputStream extends InputStream {
             fillBuffer();
         }
 
-        return buffer.get();
+        final int ret = buffer.get();
+        if (ret > -1) {
+            uncompressedCount++;
+        }
+        return ret;
+    }
+
+    /**
+     * @since 1.17
+     */
+    @Override
+    public long getCompressedCount() {
+        return bits.getBytesRead() + treeSizes;
+    }
+
+    /**
+     * @since 1.17
+     */
+    @Override
+    public long getUncompressedCount() {
+        return uncompressedCount;
+    }
+
+    /**
+     * @since 1.17
+     */
+    @Override
+    public void close() throws IOException {
+        in.close();
     }
 
     /**
@@ -116,7 +159,7 @@ class ExplodingInputStream extends InputStream {
      */
     private void fillBuffer() throws IOException {
         init();
-        
+
         final int bit = bits.nextBit();
         if (bit == 1) {
             // literal value
@@ -131,7 +174,7 @@ class ExplodingInputStream extends InputStream {
                 // end of stream reached, nothing left to decode
                 return;
             }
-            
+
             buffer.put(literal);
 
         } else if (bit == 0) {
@@ -144,7 +187,7 @@ class ExplodingInputStream extends InputStream {
                 return;
             }
             final int distance = distanceHigh << distanceLowSize | distanceLow;
-            
+
             int length = lengthTree.read(bits);
             if (length == 63) {
                 length += bits.nextBits(8);

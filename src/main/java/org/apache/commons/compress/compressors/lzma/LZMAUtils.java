@@ -38,7 +38,7 @@ public class LZMAUtils {
         (byte) 0x5D, 0, 0
     };
 
-    static enum CachedAvailability {
+    enum CachedAvailability {
         DONT_CACHE, CACHED_AVAILABLE, CACHED_UNAVAILABLE
     }
 
@@ -151,7 +151,7 @@ public class LZMAUtils {
             cachedLZMAAvailability = CachedAvailability.DONT_CACHE;
         } else if (cachedLZMAAvailability == CachedAvailability.DONT_CACHE) {
             final boolean hasLzma = internalIsLZMACompressionAvailable();
-            cachedLZMAAvailability = hasLzma ? CachedAvailability.CACHED_AVAILABLE
+            cachedLZMAAvailability = hasLzma ? CachedAvailability.CACHED_AVAILABLE // NOSONAR
                 : CachedAvailability.CACHED_UNAVAILABLE;
         }
     }
