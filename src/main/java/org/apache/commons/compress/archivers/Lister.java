@@ -20,9 +20,9 @@ package org.apache.commons.compress.archivers;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 
 /**
@@ -55,7 +55,7 @@ public final class Lister {
     }
 
     private static void listStream(File f, String[] args) throws ArchiveException, IOException {
-        try (final InputStream fis = new BufferedInputStream(Files.newInputStream(f.toPath()));
+        try (final InputStream fis = new BufferedInputStream(new FileInputStream(f));
                 final ArchiveInputStream ais = createArchiveInputStream(args, fis)) {
             System.out.println("Created " + ais.toString());
             ArchiveEntry ae;
@@ -74,7 +74,7 @@ public final class Lister {
     }
 
     private static String detectFormat(File f) throws ArchiveException, IOException {
-        try (final InputStream fis = new BufferedInputStream(Files.newInputStream(f.toPath()))) {
+        try (final InputStream fis = new BufferedInputStream(new FileInputStream(f))) {
             return factory.detect(fis);
         }
     }

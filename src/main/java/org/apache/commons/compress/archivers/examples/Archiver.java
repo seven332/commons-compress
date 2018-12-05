@@ -20,10 +20,11 @@ package org.apache.commons.compress.archivers.examples;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
 
 import okio.Okio;
 import okio.Store;
@@ -73,7 +74,7 @@ public class Archiver {
             }
             return;
         }
-        try (OutputStream o = Files.newOutputStream(target.toPath())) {
+        try (OutputStream o = new FileOutputStream(target)) {
             create(format, o, directory);
         }
     }
@@ -145,7 +146,7 @@ public class Archiver {
             public void accept(File source, ArchiveEntry e) throws IOException {
                 target.putArchiveEntry(e);
                 if (!e.isDirectory()) {
-                    try (InputStream in = new BufferedInputStream(Files.newInputStream(source.toPath()))) {
+                    try (InputStream in = new BufferedInputStream(new FileInputStream(source))) {
                         IOUtils.copy(in, target);
                     }
                 }
@@ -178,7 +179,7 @@ public class Archiver {
                     final byte[] buffer = new byte[8024];
                     int n = 0;
                     long count = 0;
-                    try (InputStream in = new BufferedInputStream(Files.newInputStream(source.toPath()))) {
+                    try (InputStream in = new BufferedInputStream(new FileInputStream(source))) {
                         while (-1 != (n = in.read(buffer))) {
                             target.write(buffer, 0, n);
                             count += n;

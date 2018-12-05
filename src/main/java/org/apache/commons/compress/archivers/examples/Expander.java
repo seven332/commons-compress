@@ -20,10 +20,11 @@ package org.apache.commons.compress.archivers.examples;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.util.Enumeration;
 
 import okio.Okio;
@@ -64,7 +65,7 @@ public class Expander {
      */
     public void expand(File archive, File targetDirectory) throws IOException, ArchiveException {
         String format = null;
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()))) {
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive))) {
             format = new ArchiveStreamFactory().detect(i);
         }
         expand(format, archive, targetDirectory);
@@ -87,7 +88,7 @@ public class Expander {
             }
             return;
         }
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()))) {
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive))) {
             expand(format, i, targetDirectory);
         }
     }
@@ -257,7 +258,7 @@ public class Expander {
                 if (!parent.isDirectory() && !parent.mkdirs()) {
                     throw new IOException("failed to create directory " + parent);
                 }
-                try (OutputStream o = Files.newOutputStream(f.toPath())) {
+                try (OutputStream o = new FileOutputStream(f)) {
                     writer.writeEntryDataTo(nextEntry, o);
                 }
             }

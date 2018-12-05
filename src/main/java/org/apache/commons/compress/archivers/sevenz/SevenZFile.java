@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +43,7 @@ import okio.Store;
 import org.apache.commons.compress.utils.BoundedInputStream;
 import org.apache.commons.compress.utils.CRC32VerifyingInputStream;
 import org.apache.commons.compress.utils.CharsetNames;
+import org.apache.commons.compress.utils.Charsets;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.compress.utils.InputStreamStatistics;
 
@@ -1173,7 +1173,7 @@ public class SevenZFile implements Closeable {
       return archive.toString();
     }
 
-    private static final CharsetEncoder PASSWORD_ENCODER = StandardCharsets.UTF_16LE.newEncoder();
+    private static final CharsetEncoder PASSWORD_ENCODER = Charsets.UTF_16LE.newEncoder();
 
     private static byte[] utf16Decode(char[] chars) throws IOException {
         if (chars == null) {

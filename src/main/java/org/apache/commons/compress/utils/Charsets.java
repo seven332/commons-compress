@@ -97,7 +97,7 @@ public class Charsets {
      * @see <a href="https://docs.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
      * @deprecated replaced by {@link StandardCharsets} in Java 7
      */
-    public static final Charset ISO_8859_1 = StandardCharsets.ISO_8859_1;
+    public static final Charset ISO_8859_1 = Charset.forName("ISO-8859-1");
 
     /**
      * <p>
@@ -110,7 +110,7 @@ public class Charsets {
      * @see <a href="https://docs.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
      * @deprecated replaced by {@link StandardCharsets} in Java 7
      */
-    public static final Charset US_ASCII = StandardCharsets.US_ASCII;
+    public static final Charset US_ASCII = Charset.forName("US-ASCII");
 
     /**
      * <p>
@@ -124,7 +124,7 @@ public class Charsets {
      * @see <a href="https://docs.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
      * @deprecated replaced by {@link StandardCharsets} in Java 7
      */
-    public static final Charset UTF_16 = StandardCharsets.UTF_16;
+    public static final Charset UTF_16 = Charset.forName("UTF-16");
 
     /**
      * <p>
@@ -137,7 +137,7 @@ public class Charsets {
      * @see <a href="https://docs.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
      * @deprecated replaced by {@link StandardCharsets} in Java 7
      */
-    public static final Charset UTF_16BE = StandardCharsets.UTF_16BE;
+    public static final Charset UTF_16BE = Charset.forName("UTF-16BE");
 
     /**
      * <p>
@@ -150,7 +150,7 @@ public class Charsets {
      * @see <a href="https://docs.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
      * @deprecated replaced by {@link StandardCharsets} in Java 7
      */
-    public static final Charset UTF_16LE = StandardCharsets.UTF_16LE;
+    public static final Charset UTF_16LE = Charset.forName("UTF-16LE");
 
     /**
      * <p>
@@ -163,5 +163,5 @@ public class Charsets {
      * @see <a href="https://docs.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
      * @deprecated replaced by {@link StandardCharsets} in Java 7
      */
-    public static final Charset UTF_8 = StandardCharsets.UTF_8;
+    public static final Charset UTF_8 = Charset.forName("UTF-8");
 }

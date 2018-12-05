@@ -187,7 +187,9 @@ public class ExtraFieldUtils {
                 }
                 v.add(ze);
             } catch (final InstantiationException | IllegalAccessException ie) {
-                throw (ZipException) new ZipException(ie.getMessage()).initCause(ie);
+                // ReflectiveOperationException is not available on Java 6
+                // Cast it to  Throwable to avoid casting to ReflectiveOperationException by compiler
+                throw (ZipException) new ZipException(((Throwable) ie).getMessage()).initCause(ie);
             }
             start += length + WORD;
         }

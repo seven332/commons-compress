@@ -20,10 +20,11 @@
 package org.apache.commons.compress.compressors.pack200;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 
 /**
  * StreamSwitcher that caches all data written to the output side in
@@ -36,13 +37,13 @@ class TempFileCachingStreamBridge extends StreamBridge {
     TempFileCachingStreamBridge() throws IOException {
         f = File.createTempFile("commons-compress", "packtemp");
         f.deleteOnExit();
-        out = Files.newOutputStream(f.toPath());
+        out = new FileOutputStream(f);
     }
 
     @Override
     InputStream getInputView() throws IOException {
         out.close();
-        return new FilterInputStream(Files.newInputStream(f.toPath())) {
+        return new FilterInputStream(new FileInputStream(f)) {
             @Override
             public void close() throws IOException {
                 try {
