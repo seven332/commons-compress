@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
@@ -1163,7 +1164,7 @@ public class SevenZFile implements Closeable {
 
     private void readFully(ByteBuffer buf) throws IOException {
         buf.rewind();
-        IOUtils.readFully(channel, buf);
+        IOUtils.readFully((ReadableByteChannel) channel, buf);
         buf.flip();
     }
 
