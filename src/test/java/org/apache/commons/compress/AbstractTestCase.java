@@ -19,6 +19,7 @@
 package org.apache.commons.compress;
 
 import static org.junit.Assert.*;
+
 import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.File;
@@ -28,8 +29,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +42,7 @@ import org.apache.commons.compress.utils.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 
-public abstract class AbstractTestCase {
+public abstract class AbstractTestCase extends BaseTestCase {
 
     protected File dir;
     protected File resultDir;
@@ -65,20 +64,6 @@ public abstract class AbstractTestCase {
         f.delete();
         f.mkdir();
         return f;
-    }
-
-    public static File getFile(final String path) throws IOException {
-        final URL url = AbstractTestCase.class.getClassLoader().getResource(path);
-        if (url == null) {
-            throw new FileNotFoundException("couldn't find " + path);
-        }
-        URI uri = null;
-        try {
-            uri = url.toURI();
-        } catch (final java.net.URISyntaxException ex) {
-            throw new IOException(ex);
-        }
-        return new File(uri);
     }
 
     @After

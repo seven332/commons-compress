@@ -29,15 +29,15 @@ import java.io.InputStream;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedOutputStream;
 
-import org.apache.commons.compress.AbstractTestCase;
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.utils.BoundedInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Test;
 
-public class ExplodeSupportTest {
+public class ExplodeSupportTest extends BaseTestCase {
 
     private void testArchiveWithImplodeCompression(final String filename, final String entryName) throws IOException {
-        final ZipFile zip = new ZipFile(AbstractTestCase.getFile(filename));
+        final ZipFile zip = new ZipFile(getFile(filename));
         final ZipArchiveEntry entry = zip.getEntries().nextElement();
         assertEquals("entry name", entryName, entry.getName());
         assertTrue("entry can't be read", zip.canReadEntryData(entry));
@@ -69,7 +69,7 @@ public class ExplodeSupportTest {
     }
 
     private void testZipStreamWithImplodeCompression(final String filename, final String entryName) throws IOException {
-        final ZipArchiveInputStream zin = new ZipArchiveInputStream(new FileInputStream(AbstractTestCase.getFile(filename)));
+        final ZipArchiveInputStream zin = new ZipArchiveInputStream(new FileInputStream(getFile(filename)));
         final ZipArchiveEntry entry = zin.getNextZipEntry();
         assertEquals("entry name", entryName, entry.getName());
         assertTrue("entry can't be read", zin.canReadEntryData(entry));

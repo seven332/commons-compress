@@ -27,7 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilenameFilter;
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -59,8 +59,8 @@ public class LongSymLinkTest extends AbstractTestCase {
 
     static {
         try {
-            ARCDIR = new File(CLASSLOADER.getResource("longsymlink").toURI());
-        } catch (URISyntaxException e) {
+            ARCDIR = getFile("longsymlink");
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

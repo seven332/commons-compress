@@ -18,7 +18,6 @@
 
 package org.apache.commons.compress.archivers.tar;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.apache.commons.compress.AbstractTestCase.mkdir;
 import static org.apache.commons.compress.AbstractTestCase.rmdir;
 import static org.junit.Assert.assertArrayEquals;
@@ -41,12 +40,13 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.utils.CharsetNames;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Test;
 
-public class TarArchiveInputStreamTest {
+public class TarArchiveInputStreamTest extends BaseTestCase {
 
     @Test
     public void readSimplePaxHeader() throws Exception {

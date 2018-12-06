@@ -18,17 +18,16 @@
  */
 package org.apache.commons.compress.compressors.xz;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class XZCompressorInputStreamTest {
+public class XZCompressorInputStreamTest extends BaseTestCase {
     @Test
     public void redundantTestOfAlmostDeprecatedMatchesMethod() {
         final byte[] data = {

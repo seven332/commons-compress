@@ -18,16 +18,16 @@
 
 package org.apache.commons.compress.archivers.zip;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.Test;
 
-public class EncryptedArchiveTest {
+public class EncryptedArchiveTest extends BaseTestCase {
 
     @Test
     public void testReadPasswordEncryptedEntryViaZipFile()

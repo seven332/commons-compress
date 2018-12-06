@@ -17,6 +17,7 @@
  */
 package org.apache.commons.compress.archivers.zip;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,7 +34,6 @@ import java.util.Enumeration;
 import java.util.TimeZone;
 import java.util.zip.ZipException;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.apache.commons.compress.AbstractTestCase.mkdir;
 import static org.apache.commons.compress.AbstractTestCase.rmdir;
 import static org.apache.commons.compress.archivers.zip.X5455_ExtendedTimestamp.ACCESS_TIME_BIT;
@@ -46,7 +46,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class X5455_ExtendedTimestampTest {
+public class X5455_ExtendedTimestampTest extends BaseTestCase {
     private final static ZipShort X5455 = new ZipShort(0x5455);
 
     private final static ZipLong ZERO_TIME = new ZipLong(0);

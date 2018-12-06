@@ -1,0 +1,67 @@
+apply plugin: 'com.android.library'
+apply plugin: 'ru.vyarus.animalsniffer'
+
+android {
+    compileSdkVersion 28
+
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 28
+        versionCode 118
+        versionName "1.18"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        main.java.srcDirs += "${rootProject.projectDir}/src/main/java"
+        androidTest.java.srcDirs += "${rootProject.projectDir}/src/test/java"
+        androidTest.java.exclude '**/OsgiITest.java'
+        androidTest.java.exclude '**/*IT.java'
+        androidTest.resources.srcDirs += "${rootProject.projectDir}/src/test/resources"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+task processAndroidTestResources2 << {
+    copy {
+        from tarTree(resources.bzip2("${rootProject.projectDir}/src/test/resources/zip64support.tar.bz2"))
+        into 'src/androidTest/resources'
+    }
+    copy {
+        from tarTree("${rootProject.projectDir}/src/test/resources/zstd-tests.tar")
+        into 'src/androidTest/resources'
+    }
+
+    File archivesFile = project.file('src/androidTest/resources/archives/contents.txt')
+    archivesFile.getParentFile().mkdirs()
+    archivesFile.text = rootProject.file('src/test/resources/archives').list().join('\n')
+
+    File longpathFile = project.file('src/androidTest/resources/longpath/contents.txt')
+    longpathFile.getParentFile().mkdirs()
+    longpathFile.text = rootProject.file('src/test/resources/longpath').list().join('\n')
+
+    File longsymlinkFile = project.file('src/androidTest/resources/longsymlink/contents.txt')
+    longsymlinkFile.getParentFile().mkdirs()
+    longsymlinkFile.text = rootProject.file('src/test/resources/longsymlink').list().join('\n')
+}
+
+dependencies {
+    implementation 'com.github.luben:zstd-jni:1.3.7-2@aar'
+    implementation 'org.tukaani:xz:1.8'
+    implementation 'org.brotli:dec:0.1.2'
+    api 'com.github.seven332.okio:okio:1.16.0'
+    androidTestImplementation 'androidx.test:core:1.0.0'
+    androidTestImplementation 'androidx.test:runner:1.1.0'
+    androidTestImplementation 'androidx.test:rules:1.1.0'
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation 'org.powermock:powermock-module-junit4:1.6.6'
+    androidTestImplementation 'org.powermock:powermock-api-mockito:1.6.6'
+}
+
+project.afterEvaluate {
+    processDebugAndroidTestJavaRes.dependsOn processAndroidTestResources2
+}

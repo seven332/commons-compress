@@ -8,6 +8,8 @@ targetCompatibility = 1.7
 sourceSets {
     main.java.srcDirs += "${rootProject.projectDir}/src/main/java"
     test.java.srcDirs += "${rootProject.projectDir}/src/test/java"
+    test.java.exclude '**/OsgiITest.java'
+    test.java.exclude '**/*IT.java'
     test.resources.srcDirs += "${rootProject.projectDir}/src/test/resources"
 }
 
@@ -24,11 +26,6 @@ task processTestResources2 << {
 
 test.dependsOn processTestResources2
 
-test {
-    exclude '**/OsgiITest.class'
-    exclude '**/*IT.class'
-}
-
 animalsniffer {
     // D8 can handles "void Throwable.addSuppressed(Throwable)"
     ignore 'java.lang.Throwable'
@@ -42,14 +39,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
     testCompile 'org.powermock:powermock-module-junit4:1.6.6'
     testCompile 'org.powermock:powermock-api-mockito:1.6.6'
-    testCompile 'org.ops4j.pax.exam:pax-exam-container-native:4.13.0'
-    testCompile 'org.ops4j.pax.exam:pax-exam-junit4:4.13.0'
-    testCompile 'org.ops4j.pax.exam:pax-exam-cm:4.13.0'
-    testCompile 'org.ops4j.pax.exam:pax-exam-link-mvn:4.13.0'
-    testCompile 'org.apache.felix:org.apache.felix.framework:6.0.1'
-    testCompile 'javax.inject:javax.inject:1'
-    testCompile 'org.slf4j:slf4j-api:1.7.25'
-    testCompileOnly 'org.osgi:org.osgi.core:6.0.0'
     signature 'org.codehaus.mojo.signature:java16:1.1@signature'
 }
 

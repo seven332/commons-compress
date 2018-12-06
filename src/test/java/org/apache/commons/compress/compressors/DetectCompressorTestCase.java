@@ -18,7 +18,6 @@
  */
 package org.apache.commons.compress.compressors;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -31,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.MemoryLimitException;
 import org.apache.commons.compress.MockEvilInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -42,7 +42,7 @@ import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStre
 import org.junit.Test;
 
 @SuppressWarnings("deprecation") // deliberately tests setDecompressConcatenated
-public final class DetectCompressorTestCase {
+public final class DetectCompressorTestCase extends BaseTestCase {
 
     final CompressorStreamFactory factory = new CompressorStreamFactory();
     private static final CompressorStreamFactory factoryTrue = new CompressorStreamFactory(true);

@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.commons.compress.AbstractTestCase;
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.utils.IOUtils;
 
 import org.junit.Assert;
@@ -34,13 +34,13 @@ import org.junit.runners.Parameterized.Parameters;
 import org.junit.runner.RunWith;
 
 @RunWith(Parameterized.class)
-public class XXHash32Test {
+public class XXHash32Test extends BaseTestCase {
 
     private final File file;
     private final String expectedChecksum;
 
     public XXHash32Test(String fileName, String c) throws IOException {
-        file = AbstractTestCase.getFile(fileName);
+        file = getFile(fileName);
         expectedChecksum = c;
     }
 

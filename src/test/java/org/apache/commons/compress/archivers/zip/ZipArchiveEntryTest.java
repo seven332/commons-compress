@@ -18,19 +18,19 @@
 
 package org.apache.commons.compress.archivers.zip;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.util.zip.ZipEntry;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.Test;
 
 /**
  * JUnit testcases for org.apache.commons.compress.archivers.zip.ZipEntry.
  *
  */
-public class ZipArchiveEntryTest {
+public class ZipArchiveEntryTest extends BaseTestCase {
 
     /**
      * test handling of extra fields

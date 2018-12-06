@@ -19,10 +19,9 @@
 package org.apache.commons.compress.archivers.examples;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 import okio.Okio;
 import okio.Store;
@@ -32,6 +31,7 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.StreamingNotSupportedException;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
+import org.apache.commons.compress.utils.Charsets;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,11 +45,11 @@ public class SevenZArchiverTest extends AbstractTestCase {
         super.setUp();
         File c = new File(dir, "a/b/c");
         c.mkdirs();
-        try (OutputStream os = Files.newOutputStream(new File(dir, "a/b/d.txt").toPath())) {
-            os.write("Hello, world 1".getBytes(StandardCharsets.UTF_8));
+        try (OutputStream os = new FileOutputStream(new File(dir, "a/b/d.txt"))) {
+            os.write("Hello, world 1".getBytes(Charsets.UTF_8));
         }
-        try (OutputStream os = Files.newOutputStream(new File(dir, "a/b/c/e.txt").toPath())) {
-            os.write("Hello, world 2".getBytes(StandardCharsets.UTF_8));
+        try (OutputStream os = new FileOutputStream(new File(dir, "a/b/c/e.txt"))) {
+            os.write("Hello, world 2".getBytes(Charsets.UTF_8));
         }
         target = new File(resultDir, "test.7z");
     }
@@ -62,7 +62,7 @@ public class SevenZArchiverTest extends AbstractTestCase {
 
     @Test(expected = StreamingNotSupportedException.class)
     public void outputStreamVersion() throws IOException, ArchiveException {
-        try (OutputStream os = Files.newOutputStream(target.toPath())) {
+        try (OutputStream os = new FileOutputStream(target)) {
             new Archiver().create("7z", os, dir);
         }
     }
@@ -113,7 +113,7 @@ public class SevenZArchiverTest extends AbstractTestCase {
         Assert.assertNotNull(expectedName + " does not exists", entry);
         Assert.assertEquals(expectedName, entry.getName());
         Assert.assertFalse(expectedName + " is a directory", entry.isDirectory());
-        byte[] expected = ("Hello, world " + suffix).getBytes(StandardCharsets.UTF_8);
+        byte[] expected = ("Hello, world " + suffix).getBytes(Charsets.UTF_8);
         byte[] actual = new byte[expected.length];
         Assert.assertEquals(actual.length, z.read(actual));
         Assert.assertEquals(-1, z.read());

@@ -18,13 +18,13 @@
 
 package org.apache.commons.compress.archivers.zip;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.junit.Test;
 
@@ -42,7 +42,7 @@ import org.junit.Test;
  * yields an exception.
  *
  */
-public class Maven221MultiVolumeTest {
+public class Maven221MultiVolumeTest extends BaseTestCase {
 
     private static final String [] ENTRIES = new String [] {
         "apache-maven-2.2.1/",

@@ -18,6 +18,7 @@
  */
 package org.apache.commons.compress.archivers.zip;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,13 +27,12 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.zip.ZipException;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class X7875_NewUnixTest {
+public class X7875_NewUnixTest extends BaseTestCase {
 
     private final static ZipShort X7875 = new ZipShort(0x7875);
 

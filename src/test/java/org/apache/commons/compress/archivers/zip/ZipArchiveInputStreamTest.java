@@ -18,7 +18,6 @@
 
 package org.apache.commons.compress.archivers.zip;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -35,12 +34,13 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.zip.ZipException;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ZipArchiveInputStreamTest {
+public class ZipArchiveInputStreamTest extends BaseTestCase {
 
     /**
      * @see "https://issues.apache.org/jira/browse/COMPRESS-176"

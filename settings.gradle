@@ -1,2 +1,5 @@
-include ":commons-compress"
-project(":commons-compress").projectDir = new File("projects/commons-compress")
+include ":jvm"
+project(":jvm").projectDir = new File("projects/jvm")
+
+include ":android"
+project(":android").projectDir = new File("projects/android")

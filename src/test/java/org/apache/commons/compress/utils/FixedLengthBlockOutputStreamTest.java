@@ -27,15 +27,14 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.Test;
@@ -191,19 +190,16 @@ public class FixedLengthBlockOutputStreamTest {
 
     @Test
     public void testWithFileOutputStream() throws IOException {
-        final Path tempFile = Files.createTempFile("xxx", "yyy");
+        final File tempFile = File.createTempFile("xxx", "yyy");
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (IOException e) {
-                }
+                tempFile.delete();
             }
         });
         int blockSize = 512;
         int reps = 1000;
-        OutputStream os = new FileOutputStream(tempFile.toFile());
+        OutputStream os = new FileOutputStream(tempFile);
         try (FixedLengthBlockOutputStream out = new FixedLengthBlockOutputStream(
             os, blockSize)) {
             DataOutputStream dos = new DataOutputStream(out);
@@ -213,8 +209,8 @@ public class FixedLengthBlockOutputStreamTest {
         }
         long expectedDataSize = reps * 4L;
         long expectedFileSize = (long)Math.ceil(expectedDataSize/(double)blockSize)*blockSize;
-        assertEquals("file size",expectedFileSize, Files.size(tempFile));
-        DataInputStream din = new DataInputStream(Files.newInputStream(tempFile));
+        assertEquals("file size",expectedFileSize, tempFile.length());
+        DataInputStream din = new DataInputStream(new FileInputStream(tempFile));
         for(int i=0;i<reps;i++) {
             assertEquals("file int",i,din.readInt());
         }
@@ -256,7 +252,7 @@ public class FixedLengthBlockOutputStreamTest {
     private void testWriteAndPad(int blockSize, String text, boolean doPartialWrite)
         throws IOException {
         MockWritableByteChannel mock = new MockWritableByteChannel(blockSize, doPartialWrite);
-        byte[] msg = text.getBytes(StandardCharsets.US_ASCII);
+        byte[] msg = text.getBytes(Charsets.US_ASCII);
 
         ByteArrayOutputStream bos = mock.bos;
         try (FixedLengthBlockOutputStream out = new FixedLengthBlockOutputStream(mock, blockSize)) {
@@ -270,7 +266,7 @@ public class FixedLengthBlockOutputStreamTest {
     private void testWriteAndPadToStream(int blockSize, String text, boolean doPartialWrite)
         throws IOException {
         MockOutputStream mock = new MockOutputStream(blockSize, doPartialWrite);
-        byte[] msg = text.getBytes(StandardCharsets.US_ASCII);
+        byte[] msg = text.getBytes(Charsets.US_ASCII);
 
         ByteArrayOutputStream bos = mock.bos;
         try (FixedLengthBlockOutputStream out = new FixedLengthBlockOutputStream(mock, blockSize)) {

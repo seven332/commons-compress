@@ -4,6 +4,8 @@ buildscript {
         jcenter()
     }
     dependencies {
+        classpath 'com.android.tools.build:gradle:3.2.1'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
         classpath 'ru.vyarus:gradle-animalsniffer-plugin:1.4.6'
     }
 }

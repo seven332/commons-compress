@@ -18,19 +18,18 @@
  */
 package org.apache.commons.compress.compressors.bzip2;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class BZip2CompressorInputStreamTest {
+public class BZip2CompressorInputStreamTest extends BaseTestCase {
 
     @Test(expected = IOException.class)
     public void shouldThrowAnIOExceptionWhenAppliedToAZipFile() throws Exception {

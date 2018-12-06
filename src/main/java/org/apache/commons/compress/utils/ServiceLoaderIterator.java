@@ -39,7 +39,7 @@ public class ServiceLoaderIterator<E> implements Iterator<E> {
     private final Iterator<E> serviceLoaderIterator;
 
     public ServiceLoaderIterator(final Class<E> service) {
-        this(service, ClassLoader.getSystemClassLoader());
+        this(service, ServiceLoaderIterator.class.getClassLoader());
     }
 
     public ServiceLoaderIterator(final Class<E> service, final ClassLoader classLoader) {

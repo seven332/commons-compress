@@ -10,3 +10,4 @@ classes
 *~
 /.externalToolBuilders/
 /maven-eclipse.xml
+projects/android/src/androidTest/resources

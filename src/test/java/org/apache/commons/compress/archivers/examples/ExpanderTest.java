@@ -20,11 +20,11 @@ package org.apache.commons.compress.archivers.examples;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 import okio.Okio;
 import okio.Store;
@@ -37,6 +37,7 @@ import org.apache.commons.compress.archivers.StreamingNotSupportedException;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile;
 import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.compress.utils.Charsets;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -68,7 +69,7 @@ public class ExpanderTest extends AbstractTestCase {
     @Test(expected = StreamingNotSupportedException.class)
     public void sevenZInputStreamVersion() throws IOException, ArchiveException {
         setup7z();
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()))) {
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive))) {
             new Expander().expand("7z", i, resultDir);
         }
     }
@@ -76,7 +77,7 @@ public class ExpanderTest extends AbstractTestCase {
     @Test(expected = StreamingNotSupportedException.class)
     public void sevenZInputStreamVersionWithAutoDetection() throws IOException, ArchiveException {
         setup7z();
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()))) {
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive))) {
             new Expander().expand(i, resultDir);
         }
     }
@@ -150,7 +151,7 @@ public class ExpanderTest extends AbstractTestCase {
     private void setup7z() throws IOException, ArchiveException {
         archive = new File(dir, "test.7z");
         File dummy = new File(dir, "x");
-        try (OutputStream o = Files.newOutputStream(dummy.toPath())) {
+        try (OutputStream o = new FileOutputStream(dummy)) {
             o.write(new byte[14]);
         }
         try (SevenZOutputFile aos = new SevenZOutputFile(archive)) {
@@ -161,10 +162,10 @@ public class ExpanderTest extends AbstractTestCase {
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a/b/c"));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, "a/b/d.txt"));
-            aos.write("Hello, world 1".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 1".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, "a/b/c/e.txt"));
-            aos.write("Hello, world 2".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 2".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.finish();
         }
@@ -173,11 +174,11 @@ public class ExpanderTest extends AbstractTestCase {
     private void setupZip() throws IOException, ArchiveException {
         archive = new File(dir, "test.zip");
         File dummy = new File(dir, "x");
-        try (OutputStream o = Files.newOutputStream(dummy.toPath())) {
+        try (OutputStream o = new FileOutputStream(dummy)) {
             o.write(new byte[14]);
         }
         try (ArchiveOutputStream aos = new ArchiveStreamFactory()
-             .createArchiveOutputStream("zip", Files.newOutputStream(archive.toPath()))) {
+             .createArchiveOutputStream("zip", new FileOutputStream(archive))) {
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a"));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a/b"));
@@ -185,10 +186,10 @@ public class ExpanderTest extends AbstractTestCase {
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a/b/c"));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, "a/b/d.txt"));
-            aos.write("Hello, world 1".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 1".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, "a/b/c/e.txt"));
-            aos.write("Hello, world 2".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 2".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.finish();
         }
@@ -197,13 +198,13 @@ public class ExpanderTest extends AbstractTestCase {
     private void setupZip(String entry) throws IOException, ArchiveException {
         archive = new File(dir, "test.zip");
         File dummy = new File(dir, "x");
-        try (OutputStream o = Files.newOutputStream(dummy.toPath())) {
+        try (OutputStream o = new FileOutputStream(dummy)) {
             o.write(new byte[14]);
         }
         try (ArchiveOutputStream aos = new ArchiveStreamFactory()
-             .createArchiveOutputStream("zip", Files.newOutputStream(archive.toPath()))) {
+             .createArchiveOutputStream("zip", new FileOutputStream(archive))) {
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, entry));
-            aos.write("Hello, world 1".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 1".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.finish();
         }
@@ -219,8 +220,8 @@ public class ExpanderTest extends AbstractTestCase {
 
     private void assertHelloWorld(String fileName, String suffix) throws IOException {
         Assert.assertTrue(fileName + " does not exist", new File(resultDir, fileName).isFile());
-        byte[] expected = ("Hello, world " + suffix).getBytes(StandardCharsets.UTF_8);
-        try (InputStream is = Files.newInputStream(new File(resultDir, fileName).toPath())) {
+        byte[] expected = ("Hello, world " + suffix).getBytes(Charsets.UTF_8);
+        try (InputStream is = new FileInputStream(new File(resultDir, fileName))) {
             byte[] actual = IOUtils.toByteArray(is);
             Assert.assertArrayEquals(expected, actual);
         }

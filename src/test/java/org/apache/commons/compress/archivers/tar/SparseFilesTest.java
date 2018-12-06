@@ -18,15 +18,16 @@
 
 package org.apache.commons.compress.archivers.tar;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.*;
+
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
 
 
-public class SparseFilesTest {
+public class SparseFilesTest extends BaseTestCase {
 
     @Test
     public void testOldGNU() throws Throwable {

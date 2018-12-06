@@ -20,11 +20,11 @@ package org.apache.commons.compress.archivers.examples;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -36,6 +36,7 @@ import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.utils.Charsets;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,11 +71,11 @@ public class ParameterizedExpanderTest extends AbstractTestCase {
         super.setUp();
         archive = new File(dir, "test." + format);
         File dummy = new File(dir, "x");
-        try (OutputStream o = Files.newOutputStream(dummy.toPath())) {
+        try (OutputStream o = new FileOutputStream(dummy)) {
             o.write(new byte[14]);
         }
         try (ArchiveOutputStream aos = new ArchiveStreamFactory()
-             .createArchiveOutputStream(format, Files.newOutputStream(archive.toPath()))) {
+             .createArchiveOutputStream(format, new FileOutputStream(archive))) {
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a"));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a/b"));
@@ -82,10 +83,10 @@ public class ParameterizedExpanderTest extends AbstractTestCase {
             aos.putArchiveEntry(aos.createArchiveEntry(dir, "a/b/c"));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, "a/b/d.txt"));
-            aos.write("Hello, world 1".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 1".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.putArchiveEntry(aos.createArchiveEntry(dummy, "a/b/c/e.txt"));
-            aos.write("Hello, world 2".getBytes(StandardCharsets.UTF_8));
+            aos.write("Hello, world 2".getBytes(Charsets.UTF_8));
             aos.closeArchiveEntry();
             aos.finish();
         }
@@ -105,7 +106,7 @@ public class ParameterizedExpanderTest extends AbstractTestCase {
 
     @Test
     public void inputStreamVersion() throws IOException, ArchiveException {
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()))) {
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive))) {
             new Expander().expand(format, i, resultDir);
         }
         verifyTargetDir();
@@ -113,7 +114,7 @@ public class ParameterizedExpanderTest extends AbstractTestCase {
 
     @Test
     public void inputStreamVersionWithAutoDetection() throws IOException, ArchiveException {
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()))) {
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive))) {
             new Expander().expand(i, resultDir);
         }
         verifyTargetDir();
@@ -129,7 +130,7 @@ public class ParameterizedExpanderTest extends AbstractTestCase {
 
     @Test
     public void archiveInputStreamVersion() throws IOException, ArchiveException {
-        try (InputStream i = new BufferedInputStream(Files.newInputStream(archive.toPath()));
+        try (InputStream i = new BufferedInputStream(new FileInputStream(archive));
              ArchiveInputStream ais = new ArchiveStreamFactory().createArchiveInputStream(format, i)) {
             new Expander().expand(ais, resultDir);
         }
@@ -146,8 +147,8 @@ public class ParameterizedExpanderTest extends AbstractTestCase {
 
     private void assertHelloWorld(String fileName, String suffix) throws IOException {
         Assert.assertTrue(fileName + " does not exist", new File(resultDir, fileName).isFile());
-        byte[] expected = ("Hello, world " + suffix).getBytes(StandardCharsets.UTF_8);
-        try (InputStream is = Files.newInputStream(new File(resultDir, fileName).toPath())) {
+        byte[] expected = ("Hello, world " + suffix).getBytes(Charsets.UTF_8);
+        try (InputStream is = new FileInputStream(new File(resultDir, fileName))) {
             byte[] actual = IOUtils.toByteArray(is);
             Assert.assertArrayEquals(expected, actual);
         }

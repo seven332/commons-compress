@@ -27,7 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FilenameFilter;
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -59,8 +59,8 @@ public class LongPathTest extends AbstractTestCase {
 
     static {
         try {
-            ARCDIR = new File(CLASSLOADER.getResource("longpath").toURI());
-        } catch (URISyntaxException e) {
+            ARCDIR = getFile("longpath");
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

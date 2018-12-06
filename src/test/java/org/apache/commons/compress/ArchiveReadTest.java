@@ -25,7 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FilenameFilter;
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -54,8 +54,8 @@ public class ArchiveReadTest extends AbstractTestCase {
 
     static {
         try {
-            ARCDIR = new File(CLASSLOADER.getResource("archives").toURI());
-        } catch (URISyntaxException e) {
+            ARCDIR = getFile("archives");
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

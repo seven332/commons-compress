@@ -18,7 +18,6 @@
 
 package org.apache.commons.compress.archivers.zip;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
@@ -40,13 +39,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.compress.utils.MemoryStore;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ZipFileTest {
+public class ZipFileTest extends BaseTestCase {
     private ZipFile zf = null;
 
     @After
@@ -792,7 +792,7 @@ public class ZipFileTest {
                      ze.getName());
     }
 
-    private static void nameSource(String archive, String entry, ZipArchiveEntry.NameSource expected) throws Exception {
+    private void nameSource(String archive, String entry, ZipArchiveEntry.NameSource expected) throws Exception {
         try (ZipFile zf = new ZipFile(getFile(archive))) {
             ZipArchiveEntry ze = zf.getEntry(entry);
             assertEquals(entry, ze.getName());

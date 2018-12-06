@@ -17,16 +17,15 @@
  */
 package org.apache.commons.compress.compressors.deflate64;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
-
 import java.io.InputStream;
 import java.util.Enumeration;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.junit.Test;
 
-public class Deflate64BugsTest {
+public class Deflate64BugsTest extends BaseTestCase {
 
     @Test
     public void readBeyondMemoryException() throws Exception {

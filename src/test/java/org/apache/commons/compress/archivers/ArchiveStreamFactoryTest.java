@@ -18,7 +18,6 @@
  */
 package org.apache.commons.compress.archivers;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.apache.commons.compress.MockEvilInputStream;
 import org.apache.commons.compress.archivers.arj.ArjArchiveInputStream;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveInputStream;
@@ -41,7 +41,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.junit.Test;
 
-public class ArchiveStreamFactoryTest {
+public class ArchiveStreamFactoryTest extends BaseTestCase {
 
     private static final String UNKNOWN = "??";
 

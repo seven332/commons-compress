@@ -20,11 +20,11 @@ package org.apache.commons.compress.archivers.examples;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -37,6 +37,7 @@ import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.utils.Charsets;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -73,11 +74,11 @@ public class ParameterizedArchiverTest extends AbstractTestCase {
         super.setUp();
         File c = new File(dir, "a/b/c");
         c.mkdirs();
-        try (OutputStream os = Files.newOutputStream(new File(dir, "a/b/d.txt").toPath())) {
-            os.write("Hello, world 1".getBytes(StandardCharsets.UTF_8));
+        try (OutputStream os = new FileOutputStream(new File(dir, "a/b/d.txt"))) {
+            os.write("Hello, world 1".getBytes(Charsets.UTF_8));
         }
-        try (OutputStream os = Files.newOutputStream(new File(dir, "a/b/c/e.txt").toPath())) {
-            os.write("Hello, world 2".getBytes(StandardCharsets.UTF_8));
+        try (OutputStream os = new FileOutputStream(new File(dir, "a/b/c/e.txt"))) {
+            os.write("Hello, world 2".getBytes(Charsets.UTF_8));
         }
         target = new File(resultDir, "test." + format);
     }
@@ -90,7 +91,7 @@ public class ParameterizedArchiverTest extends AbstractTestCase {
 
     @Test
     public void outputStreamVersion() throws IOException, ArchiveException {
-        try (OutputStream os = Files.newOutputStream(target.toPath())) {
+        try (OutputStream os = new FileOutputStream(target)) {
             new Archiver().create(format, os, dir);
         }
         verifyContent();
@@ -106,7 +107,7 @@ public class ParameterizedArchiverTest extends AbstractTestCase {
 
     @Test
     public void archiveStreamVersion() throws IOException, ArchiveException {
-        try (OutputStream os = Files.newOutputStream(target.toPath());
+        try (OutputStream os = new FileOutputStream(target);
              ArchiveOutputStream aos = new ArchiveStreamFactory().createArchiveOutputStream(format, os)) {
             new Archiver().create(aos, dir);
         }
@@ -114,7 +115,7 @@ public class ParameterizedArchiverTest extends AbstractTestCase {
     }
 
     private void verifyContent() throws IOException, ArchiveException {
-        try (InputStream is = Files.newInputStream(target.toPath());
+        try (InputStream is = new FileInputStream(target);
              BufferedInputStream bis = new BufferedInputStream(is);
              ArchiveInputStream ais = new ArchiveStreamFactory().createArchiveInputStream(format, bis)) {
             assertDir("a", ais.getNextEntry());
@@ -145,7 +146,7 @@ public class ParameterizedArchiverTest extends AbstractTestCase {
         Assert.assertNotNull(expectedName + " does not exists", entry);
         Assert.assertEquals(expectedName, entry.getName());
         Assert.assertFalse(expectedName + " is a directory", entry.isDirectory());
-        byte[] expected = ("Hello, world " + suffix).getBytes(StandardCharsets.UTF_8);
+        byte[] expected = ("Hello, world " + suffix).getBytes(Charsets.UTF_8);
         byte[] actual = IOUtils.toByteArray(is);
         Assert.assertArrayEquals(expected, actual);
     }

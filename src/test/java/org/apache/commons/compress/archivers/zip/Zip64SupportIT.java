@@ -18,7 +18,6 @@
 
 package org.apache.commons.compress.archivers.zip;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -40,9 +39,10 @@ import java.util.Random;
 import java.util.zip.ZipEntry;
 
 import org.apache.commons.compress.AbstractTestCase;
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.Test;
 
-public class Zip64SupportIT {
+public class Zip64SupportIT extends BaseTestCase {
 
     private static final long FIVE_BILLION = 5000000000l;
     private static final int ONE_MILLION = 1000000;

@@ -18,6 +18,7 @@
  */
 package org.apache.commons.compress.compressors.z;
 
+import org.apache.commons.compress.BaseTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,10 +30,8 @@ import java.io.SequenceInputStream;
 import java.util.Enumeration;
 import org.apache.commons.compress.utils.IOUtils;
 
-import static org.apache.commons.compress.AbstractTestCase.getFile;
-import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
-
+import static org.powermock.api.mockito.PowerMockito.mock;
 
 /**
  * Unit tests for class {@link ZCompressorInputStream}.
@@ -40,7 +39,7 @@ import static org.powermock.api.mockito.PowerMockito.doReturn;
  * @date 16.06.2017
  * @see ZCompressorInputStream
  **/
-public class ZCompressorInputStreamTest {
+public class ZCompressorInputStreamTest extends BaseTestCase {
 
 
     @Test(expected = IOException.class)
