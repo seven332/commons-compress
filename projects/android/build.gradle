@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'ru.vyarus.animalsniffer'
 
 android {
@@ -64,4 +65,41 @@ dependencies {
 
 project.afterEvaluate {
     processDebugAndroidTestJavaRes.dependsOn processAndroidTestResources2
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+    options.tags = [
+            "Immutable:a:\"This class is immutable\"",
+            "NotThreadSafe:a:\"This class is not thread-safe\"",
+            "ThreadSafe:a:\"This class is thread-safe\""
+    ]
+    failOnError false
+}
+
+// build a jar with source files
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.sourceFiles
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    classpath += configurations.compile
+}
+
+// build a jar with javadoc
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
 }
