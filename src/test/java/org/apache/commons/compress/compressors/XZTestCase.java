@@ -25,7 +25,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.management.ManagementFactory;
 
 import org.apache.commons.compress.AbstractTestCase;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
@@ -36,8 +35,6 @@ public final class XZTestCase extends AbstractTestCase {
 
     @Test
     public void testXZCreation()  throws Exception {
-        final long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-        System.out.println("XZTestCase: HeapMax="+max+" bytes "+(double)max/(1024*1024)+" MB");
         final File input = getFile("test1.xml");
         final File output = new File(dir, "test1.xml.xz");
         try (OutputStream out = new FileOutputStream(output)) {
