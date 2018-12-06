@@ -64,7 +64,7 @@ public class ArchiveStreamFactoryTest {
      */
     @Test
     public void aiffFilesAreNoTARs() throws Exception {
-        try (FileInputStream fis = new FileInputStream("src/test/resources/testAIFF.aif")) {
+        try (InputStream fis = ArchiveStreamFactoryTest.class.getResourceAsStream("/testAIFF.aif")) {
             try (InputStream is = new BufferedInputStream(fis)) {
                 new ArchiveStreamFactory().createArchiveInputStream(is);
                 fail("created an input stream for a non-archive");
@@ -76,7 +76,7 @@ public class ArchiveStreamFactoryTest {
 
     @Test
     public void testCOMPRESS209() throws Exception {
-        try (FileInputStream fis = new FileInputStream("src/test/resources/testCompress209.doc")) {
+        try (InputStream fis = ArchiveStreamFactoryTest.class.getResourceAsStream("/testCompress209.doc")) {
             try (InputStream bis = new BufferedInputStream(fis)) {
                 new ArchiveStreamFactory().createArchiveInputStream(bis);
                 fail("created an input stream for a non-archive");
@@ -107,7 +107,7 @@ public class ArchiveStreamFactoryTest {
      */
     @Test
     public void detectsAndThrowsFor7z() throws Exception {
-        try (FileInputStream fis = new FileInputStream("src/test/resources/bla.7z")) {
+        try (InputStream fis = ArchiveStreamFactoryTest.class.getResourceAsStream("/bla.7z")) {
             try (InputStream bis = new BufferedInputStream(fis)) {
                 new ArchiveStreamFactory().createArchiveInputStream(bis);
                 fail("Expected a StreamingNotSupportedException");
@@ -124,7 +124,7 @@ public class ArchiveStreamFactoryTest {
      */
     @Test
     public void skipsPK00Prefix() throws Exception {
-        try (FileInputStream fis = new FileInputStream("src/test/resources/COMPRESS-208.zip")) {
+        try (InputStream fis = ArchiveStreamFactoryTest.class.getResourceAsStream("/COMPRESS-208.zip")) {
             try (InputStream bis = new BufferedInputStream(fis)) {
                 try (ArchiveInputStream ais = new ArchiveStreamFactory().createArchiveInputStream(bis)) {
                     assertTrue(ais instanceof ZipArchiveInputStream);

@@ -1,1 +1,2 @@
-rootProject.name = 'commons-compress'
+include ":commons-compress"
+project(":commons-compress").projectDir = new File("projects/commons-compress")
