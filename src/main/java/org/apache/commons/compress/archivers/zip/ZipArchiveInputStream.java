@@ -643,13 +643,13 @@ public class ZipArchiveInputStream extends ArchiveInputStream implements InputSt
      * @return true, if this stream is a zip archive stream, false otherwise
      */
     public static boolean matches(final byte[] signature, final int length) {
-        if (length < ZipArchiveOutputStream.LFH_SIG.length) {
+        if (length < ZipUtil.LFH_SIG.length) {
             return false;
         }
 
-        return checksig(signature, ZipArchiveOutputStream.LFH_SIG) // normal file
-            || checksig(signature, ZipArchiveOutputStream.EOCD_SIG) // empty zip
-            || checksig(signature, ZipArchiveOutputStream.DD_SIG) // split zip
+        return checksig(signature, ZipUtil.LFH_SIG) // normal file
+            || checksig(signature, ZipUtil.EOCD_SIG) // empty zip
+            || checksig(signature, ZipUtil.DD_SIG) // split zip
             || checksig(signature, ZipLong.SINGLE_SEGMENT_SPLIT_MARKER.getBytes());
     }
 
@@ -1029,7 +1029,7 @@ public class ZipArchiveInputStream extends ArchiveInputStream implements InputSt
                 continue;
             }
             currentByte = readOneByte();
-            if (currentByte != ZipArchiveOutputStream.EOCD_SIG[1]) {
+            if (currentByte != ZipUtil.EOCD_SIG[1]) {
                 if (currentByte == -1) {
                     break;
                 }
@@ -1037,7 +1037,7 @@ public class ZipArchiveInputStream extends ArchiveInputStream implements InputSt
                 continue;
             }
             currentByte = readOneByte();
-            if (currentByte != ZipArchiveOutputStream.EOCD_SIG[2]) {
+            if (currentByte != ZipUtil.EOCD_SIG[2]) {
                 if (currentByte == -1) {
                     break;
                 }
@@ -1046,7 +1046,7 @@ public class ZipArchiveInputStream extends ArchiveInputStream implements InputSt
             }
             currentByte = readOneByte();
             if (currentByte == -1
-                || currentByte == ZipArchiveOutputStream.EOCD_SIG[3]) {
+                || currentByte == ZipUtil.EOCD_SIG[3]) {
                 break;
             }
             skipReadCall = isFirstByteOfEocdSig(currentByte);
@@ -1092,7 +1092,7 @@ public class ZipArchiveInputStream extends ArchiveInputStream implements InputSt
     }
 
     private boolean isFirstByteOfEocdSig(final int b) {
-        return b == ZipArchiveOutputStream.EOCD_SIG[0];
+        return b == ZipUtil.EOCD_SIG[0];
     }
 
     private static final byte[] APK_SIGNING_BLOCK_MAGIC = new byte[] {

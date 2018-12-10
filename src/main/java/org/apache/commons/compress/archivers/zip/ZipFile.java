@@ -586,7 +586,7 @@ public class ZipFile implements Closeable {
         /* relative offset of local header */ + WORD;
 
     private static final long CFH_SIG =
-        ZipLong.getValue(ZipArchiveOutputStream.CFH_SIG);
+        ZipLong.getValue(ZipUtil.CFH_SIG);
 
     /**
      * Reads the central directory of the given archive and populates
@@ -870,7 +870,7 @@ public class ZipFile implements Closeable {
         if (searchedForZip64EOCD) {
             archive.seek(archive.tell() - ZIP64_EOCDL_LENGTH);
             archive.readFully(wordBuf);
-            found = Arrays.equals(ZipArchiveOutputStream.ZIP64_EOCD_LOC_SIG,
+            found = Arrays.equals(ZipUtil.ZIP64_EOCD_LOC_SIG,
                                   wordBuf);
         }
         if (!found) {
@@ -900,7 +900,7 @@ public class ZipFile implements Closeable {
         archive.readFully(dwordBuf);
         archive.seek(ZipEightByteInteger.getLongValue(dwordBuf));
         archive.readFully(wordBuf);
-        if (!Arrays.equals(wordBuf, ZipArchiveOutputStream.ZIP64_EOCD_SIG)) {
+        if (!Arrays.equals(wordBuf, ZipUtil.ZIP64_EOCD_SIG)) {
             throw new ZipException("archive's ZIP64 end of central "
                                    + "directory locator is corrupt.");
         }
@@ -931,7 +931,7 @@ public class ZipFile implements Closeable {
     private void positionAtEndOfCentralDirectoryRecord()
         throws IOException {
         final boolean found = tryToLocateSignature(MIN_EOCD_SIZE, MAX_EOCD_SIZE,
-                                             ZipArchiveOutputStream.EOCD_SIG);
+                                             ZipUtil.EOCD_SIG);
         if (!found) {
             throw new ZipException("archive is not a ZIP archive");
         }
@@ -1061,7 +1061,7 @@ public class ZipFile implements Closeable {
     private boolean startsWithLocalFileHeader() throws IOException {
         archive.seek(0);
         archive.readFully(wordBuf);
-        return Arrays.equals(wordBuf, ZipArchiveOutputStream.LFH_SIG);
+        return Arrays.equals(wordBuf, ZipUtil.LFH_SIG);
     }
 
     /**
