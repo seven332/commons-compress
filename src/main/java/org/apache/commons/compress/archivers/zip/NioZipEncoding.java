@@ -97,7 +97,7 @@ class NioZipEncoding implements ZipEncoding, CharsetAccessor {
                     // un-encoded characters and allocate space based on those estimates.
                     int charCount = 0;
                     for (int i = cb.position() ; i < cb.limit(); i++) {
-                        charCount += !enc.canEncode(cb.get(i)) ? 6 : 1;
+                        charCount += !canEncode(enc, cb.get(i)) ? 6 : 1;
                     }
                     int totalExtraSpace = estimateIncrementalEncodingSize(enc, charCount);
                     out = ZipEncodingHelper.growBufferBy(out, totalExtraSpace - out.remaining());
@@ -131,6 +131,14 @@ class NioZipEncoding implements ZipEncoding, CharsetAccessor {
     public String decode(final byte[] data) throws IOException {
         return newDecoder()
             .decode(ByteBuffer.wrap(data)).toString();
+    }
+
+    private static boolean canEncode(CharsetEncoder encoder, char c) {
+        try {
+            return encoder.canEncode(c);
+        } catch (IllegalStateException e) {
+            return false;
+        }
     }
 
     private static ByteBuffer encodeFully(CharsetEncoder enc, CharBuffer cb, ByteBuffer out) {
