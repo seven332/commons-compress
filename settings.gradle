@@ -3,3 +3,6 @@ project(":jvm").projectDir = new File("projects/jvm")
 
 include ":android"
 project(":android").projectDir = new File("projects/android")
+
+include ":android-lite"
+project(":android-lite").projectDir = new File("projects/android-lite")

@@ -1,0 +1,206 @@
+import org.jboss.forge.roaster.Roaster
+import org.jboss.forge.roaster.model.source.JavaClassSource
+import org.jboss.forge.roaster.model.source.MethodHolderSource
+import org.jboss.forge.roaster.model.source.TypeHolderSource
+
+apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'ru.vyarus.animalsniffer'
+
+android {
+    compileSdkVersion 28
+
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 28
+        versionCode 118
+        versionName "1.18"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/java-copy'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+static def modifyJavaFile(String path, Closure modifier) {
+    JavaClassSource javaClass = Roaster.parse(JavaClassSource.class, new File(path))
+    modifier(javaClass)
+
+    FileWriter fileWriter = new FileWriter(path)
+    fileWriter.write(javaClass.toString())
+    fileWriter.close()
+}
+
+static def removeMethod(MethodHolderSource source, String name, String... paramTypes) {
+    source.removeMethod(source.getMethod(name, paramTypes))
+}
+
+static def removeNestedType(TypeHolderSource source, String name) {
+    source.removeNestedType(source.getNestedType(name))
+}
+
+task processJavaSource << {
+    delete {
+        delete 'src/main/java-copy'
+    }
+    copy {
+        from "${rootProject.projectDir}/src/main/java"
+        include '**/org/apache/commons/compress/archivers/sevenz/AES256SHA256Decoder.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/Archive.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/BindPair.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/BoundedSeekableByteChannelInputStream.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/Coder.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/CoderBase.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/Coders.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/DeltaDecoder.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/Folder.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/LZMADecoder.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/LZMA2Decoder.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/NID.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/SevenZArchiveEntry.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/SevenZFile.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/SevenZMethod.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/SevenZMethodConfiguration.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/StartHeader.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/StreamMap.java'
+        include '**/org/apache/commons/compress/archivers/sevenz/SubStreamsInfo.java'
+        include '**/org/apache/commons/compress/archivers/zip/AbstractUnicodeExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/AsiExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/BinaryTree.java'
+        include '**/org/apache/commons/compress/archivers/zip/BitStream.java'
+        include '**/org/apache/commons/compress/archivers/zip/CharsetAccessor.java'
+        include '**/org/apache/commons/compress/archivers/zip/CircularBuffer.java'
+        include '**/org/apache/commons/compress/archivers/zip/ExplodingInputStream.java'
+        include '**/org/apache/commons/compress/archivers/zip/ExtraFieldUtils.java'
+        include '**/org/apache/commons/compress/archivers/zip/GeneralPurposeBit.java'
+        include '**/org/apache/commons/compress/archivers/zip/InflaterInputStreamWithStatistics.java'
+        include '**/org/apache/commons/compress/archivers/zip/JarMarker.java'
+        include '**/org/apache/commons/compress/archivers/zip/NioZipEncoding.java'
+        include '**/org/apache/commons/compress/archivers/zip/PKWareExtraHeader.java'
+        include '**/org/apache/commons/compress/archivers/zip/ResourceAlignmentExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnicodeCommentExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnicodePathExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnixStat.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnparseableExtraFieldData.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnrecognizedExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnshrinkingInputStream.java'
+        include '**/org/apache/commons/compress/archivers/zip/UnsupportedZipFeatureException.java'
+        include '**/org/apache/commons/compress/archivers/zip/X000A_NTFS.java'
+        include '**/org/apache/commons/compress/archivers/zip/X0014_X509Certificates.java'
+        include '**/org/apache/commons/compress/archivers/zip/X0015_CertificateIdForFile.java'
+        include '**/org/apache/commons/compress/archivers/zip/X0016_CertificateIdForCentralDirectory.java'
+        include '**/org/apache/commons/compress/archivers/zip/X0017_StrongEncryptionHeader.java'
+        include '**/org/apache/commons/compress/archivers/zip/X0019_EncryptionRecipientCertificateList.java'
+        include '**/org/apache/commons/compress/archivers/zip/X5455_ExtendedTimestamp.java'
+        include '**/org/apache/commons/compress/archivers/zip/X7875_NewUnix.java'
+        include '**/org/apache/commons/compress/archivers/zip/Zip64ExtendedInformationExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/Zip64Mode.java'
+        include '**/org/apache/commons/compress/archivers/zip/Zip64RequiredException.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipArchiveEntry.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipArchiveEntryPredicate.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipConstants.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipEightByteInteger.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipEncoding.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipEncodingHelper.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipExtraField.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipFile.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipLong.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipMethod.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipShort.java'
+        include '**/org/apache/commons/compress/archivers/zip/ZipUtil.java'
+        include '**/org/apache/commons/compress/archivers/ArchiveEntry.java'
+        include '**/org/apache/commons/compress/archivers/EntryStreamOffsets.java'
+        include '**/org/apache/commons/compress/compressors/bzip2/BZip2CompressorInputStream.java'
+        include '**/org/apache/commons/compress/compressors/bzip2/BZip2Constants.java'
+        include '**/org/apache/commons/compress/compressors/bzip2/CRC.java'
+        include '**/org/apache/commons/compress/compressors/bzip2/Rand.java'
+        include '**/org/apache/commons/compress/compressors/deflate64/Deflate64CompressorInputStream.java'
+        include '**/org/apache/commons/compress/compressors/deflate64/HuffmanDecoder.java'
+        include '**/org/apache/commons/compress/compressors/deflate64/HuffmanState.java'
+        include '**/org/apache/commons/compress/compressors/lzw/LZWInputStream.java'
+        include '**/org/apache/commons/compress/compressors/CompressorInputStream.java'
+        include '**/org/apache/commons/compress/utils/BitInputStream.java'
+        include '**/org/apache/commons/compress/utils/BoundedInputStream.java'
+        include '**/org/apache/commons/compress/utils/ByteBufferOutputStream.java'
+        include '**/org/apache/commons/compress/utils/ByteUtils.java'
+        include '**/org/apache/commons/compress/utils/CharsetNames.java'
+        include '**/org/apache/commons/compress/utils/Charsets.java'
+        include '**/org/apache/commons/compress/utils/ChecksumVerifyingInputStream.java'
+        include '**/org/apache/commons/compress/utils/CloseShieldFilterInputStream.java'
+        include '**/org/apache/commons/compress/utils/CountingInputStream.java'
+        include '**/org/apache/commons/compress/utils/CRC32VerifyingInputStream.java'
+        include '**/org/apache/commons/compress/utils/FlushShieldFilterOutputStream.java'
+        include '**/org/apache/commons/compress/utils/IOUtils.java'
+        include '**/org/apache/commons/compress/utils/InputStreamStatistics.java'
+        include '**/org/apache/commons/compress/MemoryLimitException.java'
+        include '**/org/apache/commons/compress/PasswordRequiredException.java'
+        into "${project.projectDir}/src/main/java-copy"
+    }
+    modifyJavaFile("${project.projectDir}/src/main/java-copy/org/apache/commons/compress/archivers/zip/ZipFile.java") {
+        removeMethod(it, "copyRawEntries", "ZipArchiveOutputStream", "ZipArchiveEntryPredicate")
+    }
+    modifyJavaFile("${project.projectDir}/src/main/java-copy/org/apache/commons/compress/archivers/sevenz/Coders.java") {
+        it.removeImport('java.util.zip.Deflater')
+        it.removeImport('java.util.zip.DeflaterOutputStream')
+        it.removeImport('org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream')
+        it.removeImport('org.apache.commons.compress.utils.FlushShieldFilterOutputStream')
+        it.removeImport('org.tukaani.xz.FinishableWrapperOutputStream')
+        removeMethod(it.getNestedType("BCJDecoder"), "encode", "OutputStream", "Object")
+        removeMethod(it.getNestedType("DeflateDecoder"), "encode", "OutputStream", "Object")
+        removeMethod(it.getNestedType("BZIP2Decoder"), "encode", "OutputStream", "Object")
+        removeNestedType(it.getNestedType('DeflateDecoder'), 'DeflateDecoderOutputStream')
+    }
+}
+
+dependencies {
+    implementation 'org.tukaani:xz:1.8'
+    api 'com.github.seven332.okio:okio:1.16.0'
+}
+
+project.afterEvaluate {
+    compileDebugJavaWithJavac?.dependsOn processJavaSource
+    compileReleaseJavaWithJavac?.dependsOn processJavaSource
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+    options.tags = [
+            "Immutable:a:\"This class is immutable\"",
+            "NotThreadSafe:a:\"This class is not thread-safe\"",
+            "ThreadSafe:a:\"This class is thread-safe\""
+    ]
+    failOnError false
+}
+
+// build a jar with source files
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.sourceFiles
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    classpath += configurations.compile
+}
+
+// build a jar with javadoc
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}

@@ -11,3 +11,4 @@ classes
 /.externalToolBuilders/
 /maven-eclipse.xml
 projects/android/src/androidTest/resources
+projects/android-lite/src/main/java-copy
