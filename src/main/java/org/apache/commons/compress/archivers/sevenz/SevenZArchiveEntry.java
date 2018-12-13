@@ -49,6 +49,10 @@ public class SevenZArchiveEntry implements ArchiveEntry {
     private long size, compressedSize;
     private Iterable<? extends SevenZMethodConfiguration> contentMethods;
 
+    /// The index of this entry in all entries.
+    /// Only for SevenZFile.
+    int index;
+
     public SevenZArchiveEntry() {
     }
 

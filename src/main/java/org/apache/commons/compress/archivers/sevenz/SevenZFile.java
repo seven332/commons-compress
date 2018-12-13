@@ -261,6 +261,62 @@ public class SevenZFile implements Closeable {
     }
 
     /**
+     * Moves current archive entry to the special entry.
+     *
+     * @param entry the target entry
+     * @throws IOException the entry is not the entry of this archive, or entries could not be read
+     */
+    public void setEntry(SevenZArchiveEntry entry) throws IOException {
+        if (entry.index < 0
+                || entry.index >= archive.files.length
+                || archive.files[entry.index] != entry) {
+            throw new IOException("The entry is not an entry of this SevenZFile");
+        }
+
+        int entryIndex = entry.index;
+        int folderIndex = archive.streamMap.fileFolderIndex[entryIndex];
+        int firstFileIndex = folderIndex != -1 ? archive.streamMap.folderFirstFileIndex[folderIndex] : -1;
+
+        if (currentFolderIndex == folderIndex
+                && ((currentEntryIndex < entryIndex)
+                        || (currentEntryIndex == entryIndex
+                                && uncompressedBytesReadFromCurrentEntry == 0
+                                && compressedBytesReadFromCurrentEntry == 0))) {
+            // Continue read this folder to get target entry,
+            // or the target entry is the same entry with current entry,
+            // and no byte has been read.
+            for (int i = entryIndex - currentEntryIndex; i > 0; i--) {
+                getNextEntry();
+            }
+        } else if (folderIndex == -1) {
+            // This entry must has no stream and its size must be zero.
+            // Just clear current folder and it's streams.
+            currentEntryIndex = entryIndex;
+            currentFolderIndex = -1;
+            deferredBlockStreams.clear();
+            if (currentFolderInputStream != null) {
+                currentFolderInputStream.close();
+                currentFolderInputStream = null;
+            }
+        } else {
+            // Set current entry index to the one before first file index
+            currentEntryIndex = firstFileIndex - 1;
+            // Clear current folder and it's streams
+            currentFolderIndex = -1;
+            deferredBlockStreams.clear();
+            if (currentFolderInputStream != null) {
+                currentFolderInputStream.close();
+                currentFolderInputStream = null;
+            }
+
+            // Move to target entry
+            for (int i = entryIndex - currentEntryIndex; i > 0; i--) {
+                getNextEntry();
+            }
+        }
+    }
+
+    /**
      * Returns the next Archive Entry in this archive.
      *
      * @return the next entry,
@@ -725,6 +781,7 @@ public class SevenZFile implements Closeable {
         final SevenZArchiveEntry[] files = new SevenZArchiveEntry[(int)numFiles];
         for (int i = 0; i < files.length; i++) {
             files[i] = new SevenZArchiveEntry();
+            files[i].index = i;
         }
         BitSet isEmptyStream = null;
         BitSet isEmptyFile = null;
