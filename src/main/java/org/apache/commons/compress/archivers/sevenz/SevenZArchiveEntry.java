@@ -53,6 +53,8 @@ public class SevenZArchiveEntry implements ArchiveEntry {
     /// Only for SevenZFile.
     int index;
 
+    private boolean isFirstInFolder;
+
     public SevenZArchiveEntry() {
     }
 
@@ -487,6 +489,24 @@ public class SevenZArchiveEntry implements ArchiveEntry {
      */
     public Iterable<? extends SevenZMethodConfiguration> getContentMethods() {
         return contentMethods;
+    }
+
+    /**
+     * Return whether or not this entry is the first one in the folder.
+     *
+     * @return True if this entry is the first one in the folder.
+     */
+    public boolean isFirstInFolder() {
+        return isFirstInFolder;
+    }
+
+    /**
+     * Sets whether or not this entry is the first one in the folder.
+     *
+     * @param isFirstInFolder True if this entry is the first one in the folder.
+     */
+    void setFirstInFolder(boolean isFirstInFolder) {
+        this.isFirstInFolder = isFirstInFolder;
     }
 
     /**

@@ -967,6 +967,7 @@ public class SevenZFile implements Closeable {
             }
             if (nextFolderUnpackStreamIndex == 0) {
                 for (; nextFolderIndex < archive.folders.length; ++nextFolderIndex) {
+                    archive.files[i].setFirstInFolder(true);
                     streamMap.folderFirstFileIndex[nextFolderIndex] = i;
                     if (archive.folders[nextFolderIndex].numUnpackSubStreams > 0) {
                         break;
