@@ -298,6 +298,8 @@ public class SevenZFile implements Closeable {
                 currentFolderInputStream.close();
                 currentFolderInputStream = null;
             }
+            // getNextEntry() is skipped, so reset statistics here
+            uncompressedBytesReadFromCurrentEntry = compressedBytesReadFromCurrentEntry = 0;
         } else {
             // Set current entry index to the one before first file index
             currentEntryIndex = firstFileIndex - 1;
