@@ -1117,6 +1117,21 @@ public class SevenZFile implements Closeable {
     }
 
     /**
+     * Returns input stream from the current entry.
+     *
+     * @return input stream from the current entry
+     * @throws IOException if an I/O error has occurred
+     */
+    public InputStream getInputStreamForCurrentEntry() throws IOException {
+        return new FilterInputStream(getCurrentStream()) {
+            @Override
+            public void close() throws IOException {
+                // the nested channel is controlled externally
+            }
+        };
+    }
+
+    /**
      * Reads data into an array of bytes.
      *
      * @param b the array to write data to
